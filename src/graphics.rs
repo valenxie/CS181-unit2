@@ -1,4 +1,5 @@
 // We can pull in definitions from elsewhere in the crate!
+// The graphics is just screen
 use crate::animation::AnimationState;
 use crate::texture::Texture;
 use crate::types::{Rect, Rgba, Vec2i};
