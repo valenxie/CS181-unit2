@@ -17,8 +17,8 @@ use engine2d::animation::*;
 use engine2d::resources::*;
 use engine2d::texture::Texture;
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 240;
+const WIDTH: usize = 16*16;
+const HEIGHT: usize = 16*15;
 
 #[derive(Clone,Copy,PartialEq,Eq,Debug)]
 enum EntityType {
@@ -168,24 +168,16 @@ fn main() {
     let mut rsrc = Resources::new();
     let tileset = Rc::new(Tileset::new(
         vec![
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true},
         ],
         &rsrc.load_texture(Path::new("content/cliff.png"))
     ));
@@ -198,6 +190,7 @@ fn main() {
         ],
         &rsrc.load_texture(Path::new("content/water.png"))
     ));
+
     // Here's our game rules (the engine doesn't know about these)
     let levels:Vec<Level> = vec![
         (
@@ -217,7 +210,7 @@ fn main() {
                     15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 17, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
@@ -299,8 +292,6 @@ fn main() {
         (EntityType::Enemy, 20, 0)
     ]
 )
-        
-
     ];
     let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));

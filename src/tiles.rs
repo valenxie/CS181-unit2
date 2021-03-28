@@ -103,6 +103,7 @@ impl Tilemap {
         );
         self.map[y as usize * self.dims.0 + x as usize]
     }
+    
     pub fn size(&self) -> (usize, usize) {
         self.dims
     }
