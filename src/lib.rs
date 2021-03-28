@@ -1,3 +1,8 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::time::{Duration, Instant};
+
+use rodio::{OutputStreamHandle, Source};
 use pixels::{Pixels, SurfaceTexture};
 use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::WindowBuilder;
@@ -29,7 +34,17 @@ pub fn run<Rule, State>(
     draw: impl Fn(&Resources, &Rule, &State, &mut Screen, usize) + 'static,
     update: impl Fn(&Resources, &Rule, &mut State, &WinitInputHelper, usize) + 'static,
 ) {
-    use std::time::Instant;
+    //Set up sound effect
+    // let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+
+    // let file = File::open("content/bgm.mp3").unwrap();
+    // let background = rodio::Decoder::new(BufReader::new(file))
+    //     .unwrap()
+    //     .take_duration(Duration::from_secs(301))
+    //     .amplify(1.5)
+    //     .repeat_infinite();
+
+    // let _ = stream_handle.play_raw(background.convert_samples());
 
     let mut event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();

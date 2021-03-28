@@ -6,7 +6,7 @@ use winit::dpi::LogicalSize;
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
-use engine2d::types::*;
+use engine2d::{animation, texture, types::*};
 use engine2d::graphics::Screen;
 use engine2d::tiles::*;
 use engine2d::animation::*;
@@ -32,14 +32,8 @@ type Input = WinitInputHelper;
 #[derive(Debug,Clone,Copy)]
 enum Mode {
     Title,
-    Play(PlayMode),
+    Play,
     EndGame
-}
-#[derive(Debug,Clone,Copy)]
-enum PlayMode {
-    Map,
-    Battle,
-    Menu,
 }
 
 impl Mode {
@@ -48,12 +42,12 @@ impl Mode {
         match self {
             Mode::Title => {
                 if input.key_held(VirtualKeyCode::P){
-                    Mode::Play(PlayMode::Map)
+                    Mode::Play
                 } else {
                     self
                 }
             },
-            Mode::Play(pm) => {
+            Mode::Play => {
                 // Option-based approach; PlayMode decides what to change into.
                 // Could return a Transition enum instead
                 // if let Some(pm) = pm.update(game, input) {
@@ -63,26 +57,26 @@ impl Mode {
                 //     } 
                 if input.key_held(VirtualKeyCode::Right) {
                     if game.camera.0 < 256{
-                        //state.sprites[0].position.0 += 3;
-                        game.camera.0+=2;
+                        game.positions[0].0 += 2;
+                        game.camera.0+=1;
                     }      
                 }
                 if input.key_held(VirtualKeyCode::Left) {
                     if game.camera.0 > -256{
-                        //state.sprites[0].position.0 -= 3;
-                        game.camera.0-=2;
+                        game.positions[0].0 -= 2;
+                        game.camera.0-=1;
                     }
                 }
                 if input.key_held(VirtualKeyCode::Up) {
                     if game.camera.1 > -256{
-                        //state.sprites[0].position.1 -= 2;
-                        game.camera.1-=2;
+                        game.positions[0].1 -= 2;
+                        game.camera.1-=1;
                     }   
                 }
                 if input.key_held(VirtualKeyCode::Down) {
                     if game.camera.1 < 0{
-                        game.camera.1+=2; 
-                    //state.sprites[0].position.1 += 2;
+                        game.camera.1+=1; 
+                        game.positions[0].1 += 2;
                     }
                 } 
                 if input.key_held(VirtualKeyCode::Q){
@@ -106,15 +100,16 @@ impl Mode {
                 for t in levels[0].0.iter(){
                     t.draw(screen);
                 }
+                //TODO: draw text
             },
-            Mode::Play(pm) => {
+            Mode::Play=> {
                 // screen.set_scroll(game.camera);
                 for t in levels[1].0.iter(){
                     t.draw(screen);
                 }
-                // for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
-                //     screen.bitblt(tex,anim.frame(),*pos);
-                // }
+                for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
+                    screen.bitblt(tex,anim.frame(),*pos);
+                }
             },
             Mode::EndGame => {
                 for t in levels[2].0.iter(){
@@ -124,55 +119,8 @@ impl Mode {
         }
     }
 }
-impl PlayMode {
-    fn update(self, _game:&mut GameState, input:&Input)-> Option<Self> {// 
-        match self {
-            PlayMode::Map => {
-                if input.key_held(VirtualKeyCode::M){
-                    Some(PlayMode::Menu)
-                }
-                else if input.key_held(VirtualKeyCode::B){
-                    Some(PlayMode::Battle)
-                }
-                else if input.key_held(VirtualKeyCode::R){
-                    None
-                }
-                else{
-                    Some(self)
-                }
-            },
-            PlayMode::Menu => {
-                if input.key_held(VirtualKeyCode::X){
-                    Some(PlayMode::Map)
-                }
-                else{
-                    Some(self)
-                }
-            },
-            PlayMode::Battle => {
-                if input.key_held(VirtualKeyCode::X){
-                    Some(PlayMode::Map)
-                }
-                else{
-                    Some(self)
-                }
-            }
-        }
-    }
-    fn display(&self, _game:&GameState) {
-        match self {
-            PlayMode::Map => {
-                println!("Map: m to menu, b to battle, e to end game");
-            }
-            PlayMode::Menu => {
-                println!("Menu: x to exit menu");
-            },
-            PlayMode::Battle => {
-                println!("Battle: x to exit battle");
-            }
-        }
-    }
-}
+
+
 struct GameState{
         // Every entity has a position, a size, a texture, and animation state.
         // Assume entity 0 is the player
@@ -193,13 +141,13 @@ fn main() {
     let window_builder = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
-            .with_title("MazeRunner")
+            .with_title("MazeChill")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .with_resizable(false)
     };
     // Here's our resources...
-    let mut rsrc = Resources::new();
+    let rsrc = Resources::new();
     let lvl1tileset = Rc::new(Tileset::new(
         vec![
             // (0..119).map(|_t| Tile{solid:false}).collect()
@@ -545,16 +493,16 @@ fn main() {
         (vec![start_screen],   
        // Initial entities on level start
          vec![
-            (EntityType::Player, 2, 13),
-            (EntityType::Enemy, 10, 13)
+            (EntityType::Player, 8, 13),
+            (EntityType::Enemy, 100, 100)
             ]
          ),
 
         (vec![lvl1map1_1,lvl1map1_2,lvl1map1_3,lvl1map1_4,lvl1map1_5,lvl1map1_6],
             // Initial entities on level start
          vec![
-            (EntityType::Player, 2, 13),
-            (EntityType::Enemy, 10, 13)
+            (EntityType::Player, 8, 13),
+            (EntityType::Enemy, 100, 100)
             ]
         ), 
 
@@ -567,9 +515,8 @@ fn main() {
     ];
     let player_tex = rsrc.load_texture(Path::new("content/player.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
-    let enemy_tex = rsrc.load_texture(Path::new("content/reaper.png"));
-    let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:24,h:36}));
-    // ... more
+    let enemy_tex = Rc::clone(&player_tex);
+    let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
 
     // And here's our game state, which is just stuff that changes.
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
@@ -612,41 +559,16 @@ fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, scree
     screen.clear(Rgba(80, 80, 80, 255));
     screen.set_scroll(state.camera);
     // levels[state.level].0.draw(screen);
-    for t in levels[state.level].0.iter(){
-        t.draw(screen);
-    }
-    for ((pos,tex),anim) in state.positions.iter().zip(state.textures.iter()).zip(state.anim_state.iter()) {
-        screen.bitblt(tex,anim.frame(),*pos);
-    }
+    // for t in levels[state.level].0.iter(){
+    //     t.draw(screen);
+    // }
+    // for ((pos,tex),anim) in state.positions.iter().zip(state.textures.iter()).zip(state.anim_state.iter()) {
+    //     screen.bitblt(tex,anim.frame(),*pos);
+    // }
     state.mode.display(&state, screen,levels);
 }
 
 fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState, input: &WinitInputHelper, frame: usize) {
-    // Player control goes here
-    // if input.key_held(VirtualKeyCode::Right) {
-    //     if state.camera.0 < 512{
-    //         //state.sprites[0].position.0 += 3;
-    //         state.camera.0+=2;
-    //     }      
-    // }
-    // if input.key_held(VirtualKeyCode::Left) {
-    //     if state.camera.0 > 0{
-    //         //state.sprites[0].position.0 -= 3;
-    //         state.camera.0-=2;
-    //     }
-    // }
-    // if input.key_held(VirtualKeyCode::Up) {
-    //     if state.camera.1<512{
-    //         //state.sprites[0].position.1 -= 2;
-    //         state.camera.1-=2;
-    //     }   
-    // }
-    // if input.key_held(VirtualKeyCode::Down) {
-    //     if state.camera.1>0{
-    //     state.camera.1+=2; 
-    //     //state.sprites[0].position.1 += 2;
-    //     }
-    // }
     // Determine enemy velocity
 
     // Update all entities' positions
