@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::rc::Rc;
+use std::{thread, time};
 
 use winit::window::WindowBuilder;
 use winit::dpi::LogicalSize;
@@ -10,6 +11,12 @@ use engine2d::types::*;
 use engine2d::graphics::Screen;
 use engine2d::tiles::*;
 use engine2d::animation::*;
+
+use std::fs::File;
+use std::io::BufReader;
+use std::time::Duration;
+use rodio::{Decoder, OutputStream, Sink};
+use rodio::source::{SineWave, Source};
 
 // use engine2d::collision::*;
 // Imagine a Resources struct (we'll call it AssetDB or Assets in the future)
@@ -23,7 +30,8 @@ const HEIGHT: usize = 16*20;
 #[derive(Clone,Copy,PartialEq,Eq,Debug)]
 enum EntityType {
     Player,
-    Enemy
+    Enemy,
+    Blocker
 }
 
 type Level = (Tilemap, Vec<(EntityType, i32, i32)>);
@@ -49,6 +57,7 @@ impl Mode {
         match self {
             Mode::Title => {
                 if input.key_held(VirtualKeyCode::P){
+                    game.level=1;
                     Mode::Play(PlayMode::Map)
                 } else {
                     self
@@ -56,6 +65,7 @@ impl Mode {
                 // If the mouse clicked and it's in a certain area, then ...
             },
             Mode::Play(pm) => {
+                if game.movable {
                 // Option-based approach; PlayMode decides what to change into.
                 // Could return a Transition enum instead
                 // if let Some(pm) = pm.update(game, input) {
@@ -65,26 +75,65 @@ impl Mode {
                 // }  
                 // Player control goes here
                 if input.key_held(VirtualKeyCode::Right) {
-                    game.velocities[0].0 = 1;
+                    if game.positions[0].0 < 16*19 {
+                        game.velocities[0].0 = 1;
+                    } else {
+                        game.velocities[0].0 = 0;
+                    }
                 } else if input.key_held(VirtualKeyCode::Left) {
-                    game.velocities[0].0 = -1;
+                    if game.positions[0].0 > 0 {
+                        game.velocities[0].0 = -1;
+                    } else {
+                        game.velocities[0].0 = 0;
+                    }
                 } else {
                     game.velocities[0].0 = 0;
                 }
-
                 if input.key_held(VirtualKeyCode::Up) {
-                    game.velocities[0].1 = -1;
+                    if game.positions[0].1 > 0 {
+                        game.velocities[0].1 = -1;
+                    } else {
+                        game.velocities[0].1 = 0;
+                    }
+                    if game.positions[0].1 <= game.camera.1+16*5 && 
+                        game.camera.1 > 0 {
+                        game.camera.1 -= 1;
+                    }
                 } else if input.key_held(VirtualKeyCode::Down) {
-                    game.velocities[0].1 = 1;
+                    if game.positions[0].1 < 28*16 {
+                        game.velocities[0].1 = 1;
+                    } else {
+                        game.velocities[0].1 = 0;
+                    }
+                    if game.positions[0].1 >= game.camera.1+16*5 && 
+                        game.camera.1 < 10*16 {
+                        game.camera.1 += 1;
+                    }
                 } else {
                     game.velocities[0].1 = 0;
                 }
+            } else { // on not movable
+                game.velocities[0] = Vec2i(0,0);
+            }
+
                 // Determine enemy velocity
 
                 // Update all entities' positions
                 for (posn, vel) in game.positions.iter_mut().zip(game.velocities.iter()) {
                     posn.0 += vel.0;
                     posn.1 += vel.1;
+                }
+
+                // Die and return to start if touches fire
+                if game.positions[0].0 <= 1*16 || game.positions[0].0 >= 18*16 {
+                    game.movable = false;
+                    let ten_millis = time::Duration::from_millis(1000);
+                    // let now = time::Instant::now();
+                    thread::sleep(ten_millis);
+                    game.positions[0].0 = 9*16;
+                    game.positions[0].1 = 0;
+                    game.camera = Vec2i(0, 0);
+                    game.movable = true;
                 }
 
                 if input.key_held(VirtualKeyCode::Q){
@@ -172,17 +221,18 @@ impl PlayMode {
 struct GameState{
     // Every entity has a position, a size, a texture, and animation state.
     // Assume entity 0 is the player
+    // Current level
+    level:usize,
     types: Vec<EntityType>,
     positions: Vec<Vec2i>,
     velocities: Vec<Vec2i>,
     sizes:Vec<(usize,usize)>,
     textures:Vec<Rc<Texture>>,
     anim_state:Vec<AnimationState>,
-    // Current level
-    level:usize,
     // Camera position
     camera:Vec2i,
-    mode:Mode
+    mode:Mode, 
+    movable:bool,
 }
 
 fn main() {
@@ -194,31 +244,42 @@ fn main() {
             .with_min_inner_size(size)
             .with_resizable(false)
     };
+
     // Here's our resources...
     let mut rsrc = Resources::new();
     let tileset = Rc::new(Tileset::new(
         vec![
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
-            Tile{solid:true}, Tile{solid:true},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
         ],
-        &rsrc.load_texture(Path::new("content/cliff.png"))
+        &rsrc.load_texture(Path::new("content/jack/collage.png"))
     ));
     let tileset1 = Rc::new(Tileset::new(
         vec![
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
+            Tile{solid:false},
+            Tile{solid:false},
+            Tile{solid:false},
+            Tile{solid:false},
         ],
-        &rsrc.load_texture(Path::new("content/water.png"))
+        &rsrc.load_texture(Path::new("content/jack/collage.png"))
     ));
 
     // Here's our game rules (the engine doesn't know about these)
@@ -254,50 +315,63 @@ fn main() {
             ],
         ),
         // Initial entities on level start
-        vec![
-            (EntityType::Player, 0, 0),
-            (EntityType::Enemy, 20, 0)
-        ]
-    ),
+            vec![
+                (EntityType::Player, 9, 0),
+                (EntityType::Enemy, 20, 0)
+            ]
+        ),
 
 
         // First level - The map
         (Tilemap::new(
             Vec2i(0,0),
             // Map size
-            (20, 20),
+            (20, 30),
             &tileset,
             // Tile grid
             vec![
-                0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,
-                3,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  5,
-                6,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  8,
-                9,  10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11,
-                12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 1,  1,  1,  1,  1,  3,  3,
+                3,  3,  30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 1,  1,  1,  1,  1,  3,  3,
+                3,  3,  30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 1,  1,  1,  1,  1,  3,  3,
 
-                15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
 
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
 
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
+
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
+
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3,
+                3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
                 ],     
             ),
             // Initial entities on level start
             vec![
-                (EntityType::Player, 2, 13),
-                (EntityType::Enemy, 10, 13)
+                (EntityType::Player, 20, 20),
+                (EntityType::Enemy, 10, 13),
+                (EntityType::Blocker, 5, 13)
             ]
         ),
 
@@ -334,16 +408,20 @@ fn main() {
 //     ]
 // )
     ];
-    let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
-    let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:15,h:15}));
+    let player_tex = rsrc.load_texture(Path::new("content/jack/reaper.png"));
+    let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));
+    let blocker_tex = rsrc.load_texture(Path::new("content/jack/stone.png"));
+    let blocker_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:25}));
     // ... more
 
     // And here's our game state, which is just stuff that changes.
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
     // State here will stitch them all together.
     let mut game = GameState{
+        // Current level
+        level: 0,
         // Every entity has a position, a size, a texture, and animation state.
         // Assume entity 0 is the player
         types: vec![
@@ -365,17 +443,37 @@ fn main() {
         sizes: vec![(16,16), (16,16)],
         // Could be texture handles instead, let's talk about that in two weeks
         textures: vec![Rc::clone(&player_tex),
-                       Rc::clone(&enemy_tex)],
-        anim_state: vec![player_anim.start(), enemy_anim.start()],
-        // Current level
-        level: 0,
+                       Rc::clone(&enemy_tex), 
+                       Rc::clone(&blocker_tex)],
+        anim_state: vec![player_anim.start(), enemy_anim.start(), blocker_anim.start()],
         // Camera position
         camera: Vec2i(0, 0),
-        mode:Mode::Title
+        mode:Mode::Title, 
+        movable: true,
     };
-    
+
+    // Music and Sound
+    // Get a output stream handle to the default physical sound device
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let sink = Sink::try_new(&stream_handle).unwrap();
+    for i in 1..10 {
+        // Load a sound from a file, using a path relative to Cargo.toml
+        let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
+        // Decode that sound file into a source
+        let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5));
+        // Play the sound directly on the device
+        sink.append(source);
+    }
+    sink.play();
+    //stream_handle.play_raw(source.convert_samples());
+    // The sound plays in a separate audio thread,
+    // so we need to keep the main thread alive while it's playing.
+    std::thread::sleep(std::time::Duration::from_secs(5));
+
     engine2d::run(WIDTH, HEIGHT, window_builder, rsrc, levels, game, draw_game, update_game);
 }
+
+
 
 fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, screen: &mut Screen, frame:usize) {
     screen.clear(Rgba(80, 80, 80, 255));
