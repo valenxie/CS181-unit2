@@ -517,6 +517,7 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
     // Detect collisions: Convert positions and sizes to collision bodies, generate contacts
     let contacts = engine2d::collision::gather_contacts(&state.positions, &state.sizes);
     // Handle collisions: Apply restitution impulses.
+    // Update game rules: What happens when the player touches things? When enemies touch walls? Etc.
     for contact in contacts.iter() {
         match contact {
             Contact { 
@@ -537,16 +538,16 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
             } => {
                 if state.velocities[0].0 != 0{
                     if state.positions[0].0 > state.positions[2].0 {
-                        state.positions[0].0 += i1;
+                        state.positions[0].0 += i1+1;
                     } else {
-                        state.positions[0].0 -= i1;
+                        state.positions[0].0 -= i1+1;
                     }
                 }
                 if state.velocities[0].1 != 0 {
                     if state.positions[0].1 > state.positions[2].1 {
-                        state.positions[0].1 += i2;
+                        state.positions[0].1 += i2+1;
                     } else {
-                        state.positions[0].1 -= i2;
+                        state.positions[0].1 -= i2+1;
                     }
                 }
             }
@@ -571,7 +572,6 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
             _ => {}
         }
     }
-    // Update game rules: What happens when the player touches things?  When enemies touch walls?  Etc.
 
     // Maybe scroll the camera or change level
 }
