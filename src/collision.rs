@@ -13,5 +13,3 @@ pub enum ContactID {
 }
 
 // pub fn gather_contacts(player:, Barrier:) -> Vec<Contact> {}
-    
-
