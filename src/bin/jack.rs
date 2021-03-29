@@ -11,6 +11,7 @@ use engine2d::types::*;
 use engine2d::graphics::Screen;
 use engine2d::tiles::*;
 use engine2d::animation::*;
+use engine2d::collision::*;
 
 use std::fs::File;
 use std::io::BufReader;
@@ -65,56 +66,62 @@ impl Mode {
                 // If the mouse clicked and it's in a certain area, then ...
             },
             Mode::Play(pm) => {
+                // Player moves
                 if game.movable {
-                // Option-based approach; PlayMode decides what to change into.
-                // Could return a Transition enum instead
-                // if let Some(pm) = pm.update(game, input) {
-                //     Mode::Play(pm)
-                // } else {
-                //     Mode::EndGame
-                // }  
-                // Player control goes here
-                if input.key_held(VirtualKeyCode::Right) {
-                    if game.positions[0].0 < 16*19 {
-                        game.velocities[0].0 = 1;
+                    // Option-based approach; PlayMode decides what to change into.
+                    // Could return a Transition enum instead
+                    // if let Some(pm) = pm.update(game, input) {
+                    //     Mode::Play(pm)
+                    // } else {
+                    //     Mode::EndGame
+                    // }  
+                    // Player control goes here
+                    if input.key_held(VirtualKeyCode::Right) {
+                        if game.positions[0].0 < 16*19 {
+                            game.velocities[0].0 = 1;
+                        } else {
+                            game.velocities[0].0 = 0;
+                        }
+                    } else if input.key_held(VirtualKeyCode::Left) {
+                        if game.positions[0].0 > 0 {
+                            game.velocities[0].0 = -1;
+                        } else {
+                            game.velocities[0].0 = 0;
+                        }
                     } else {
                         game.velocities[0].0 = 0;
                     }
-                } else if input.key_held(VirtualKeyCode::Left) {
-                    if game.positions[0].0 > 0 {
-                        game.velocities[0].0 = -1;
-                    } else {
-                        game.velocities[0].0 = 0;
-                    }
-                } else {
-                    game.velocities[0].0 = 0;
-                }
-                if input.key_held(VirtualKeyCode::Up) {
-                    if game.positions[0].1 > 0 {
-                        game.velocities[0].1 = -1;
-                    } else {
-                        game.velocities[0].1 = 0;
-                    }
-                    if game.positions[0].1 <= game.camera.1+16*5 && 
-                        game.camera.1 > 0 {
-                        game.camera.1 -= 1;
-                    }
-                } else if input.key_held(VirtualKeyCode::Down) {
-                    if game.positions[0].1 < 28*16 {
-                        game.velocities[0].1 = 1;
+                    if input.key_held(VirtualKeyCode::Up) {
+                        if game.positions[0].1 > 0 {
+                            game.velocities[0].1 = -1;
+                        } else {
+                            game.velocities[0].1 = 0;
+                        }
+                        if game.positions[0].1 <= game.camera.1+16*5 && 
+                            game.camera.1 > 0 {
+                            game.camera.1 -= 1;
+                        }
+                    } else if input.key_held(VirtualKeyCode::Down) {
+                        if game.positions[0].1 < 28*16 {
+                            game.velocities[0].1 = 1;
+                        } else {
+                            game.velocities[0].1 = 0;
+                        }
+                        if game.positions[0].1 >= game.camera.1+16*5 && 
+                            game.camera.1 < 10*16 {
+                            game.camera.1 += 1;
+                        }
                     } else {
                         game.velocities[0].1 = 0;
                     }
-                    if game.positions[0].1 >= game.camera.1+16*5 && 
-                        game.camera.1 < 10*16 {
-                        game.camera.1 += 1;
-                    }
-                } else {
-                    game.velocities[0].1 = 0;
+                } else { // on not movable
+                    game.velocities[0] = Vec2i(0,0);
                 }
-            } else { // on not movable
-                game.velocities[0] = Vec2i(0,0);
-            }
+
+                // Determine blocker velocity
+                if game.positions[3].0 >= 16*16 || game.positions[3].0 <= 2*16 {
+                    game.velocities[3].0 *= -1;
+                }
 
                 // Determine enemy velocity
 
@@ -125,10 +132,14 @@ impl Mode {
                 }
 
                 // Die and return to start if touches fire
-                if game.positions[0].0 <= 1*16 || game.positions[0].0 >= 18*16 {
+                if game.positions[0].0 <= 1*16 || game.positions[0].0 >= 17*16+8 {
                     game.movable = false;
+                    let (_, temp_stream_handle) = OutputStream::try_default().unwrap();
+                    let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
+                    let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
+                    temp_stream_handle.play_raw(temp_source.convert_samples());
+
                     let ten_millis = time::Duration::from_millis(1000);
-                    // let now = time::Instant::now();
                     thread::sleep(ten_millis);
                     game.positions[0].0 = 9*16;
                     game.positions[0].1 = 0;
@@ -371,7 +382,8 @@ fn main() {
             vec![
                 (EntityType::Player, 20, 20),
                 (EntityType::Enemy, 10, 13),
-                (EntityType::Blocker, 5, 13)
+                (EntityType::Blocker, 5, 13), 
+                (EntityType::Blocker, 4, 3),
             ]
         ),
 
@@ -414,6 +426,8 @@ fn main() {
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));
     let blocker_tex = rsrc.load_texture(Path::new("content/jack/stone.png"));
     let blocker_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:25}));
+    let red_tex = rsrc.load_texture(Path::new("content/jack/red_rectangle.png"));
+    let red_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
     // ... more
 
     // And here's our game state, which is just stuff that changes.
@@ -426,26 +440,38 @@ fn main() {
         // Assume entity 0 is the player
         types: vec![
             // In a real example we'd provide nicer accessors than this
-            levels[0].1[0].0,
-            levels[0].1[1].0,
+            levels[1].1[0].0,
+            levels[1].1[1].0,
+            levels[1].1[2].0,
+            levels[1].1[3].0,
         ],
         positions: vec![
             Vec2i(
-                levels[0].1[0].1 * 16,
-                levels[0].1[0].2 * 16,
+                levels[1].1[0].1 * 16,
+                levels[1].1[0].2 * 16,
             ),
             Vec2i(
-                levels[0].1[1].1 * 16,
-                levels[0].1[1].2 * 16,
-            )
+                levels[1].1[1].1 * 16,
+                levels[1].1[1].2 * 16,
+            ), 
+            Vec2i(
+                levels[1].1[2].1 * 16,
+                levels[1].1[2].2 * 16,
+            ),
+            Vec2i(
+                levels[1].1[3].1 * 16,
+                levels[1].1[3].2 * 16,
+            ),
         ],
-        velocities: vec![Vec2i(0,0), Vec2i(0,0)],
-        sizes: vec![(16,16), (16,16)],
+        velocities: vec![Vec2i(0,0), Vec2i(0,0), Vec2i(0,0), Vec2i(1,0)],
+        sizes: vec![(16,16), (16,16), (16,16), (32,32)],
         // Could be texture handles instead, let's talk about that in two weeks
         textures: vec![Rc::clone(&player_tex),
                        Rc::clone(&enemy_tex), 
-                       Rc::clone(&blocker_tex)],
-        anim_state: vec![player_anim.start(), enemy_anim.start(), blocker_anim.start()],
+                       Rc::clone(&blocker_tex),
+                       Rc::clone(&red_tex),
+                       ],
+        anim_state: vec![player_anim.start(), enemy_anim.start(), blocker_anim.start(), red_anim.start()],
         // Camera position
         camera: Vec2i(0, 0),
         mode:Mode::Title, 
@@ -455,16 +481,19 @@ fn main() {
     // Music and Sound
     // Get a output stream handle to the default physical sound device
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    let sink = Sink::try_new(&stream_handle).unwrap();
-    for i in 1..10 {
-        // Load a sound from a file, using a path relative to Cargo.toml
-        let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
-        // Decode that sound file into a source
-        let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5));
-        // Play the sound directly on the device
-        sink.append(source);
-    }
-    sink.play();
+    let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
+    let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
+    //stream_handle.play_raw(source.convert_samples());
+    // let sink = Sink::try_new(&stream_handle).unwrap();
+    // for i in 1..10 {
+    //     // Load a sound from a file, using a path relative to Cargo.toml
+    //     let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
+    //     // Decode that sound file into a source
+    //     let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5));
+    //     // Play the sound directly on the device
+    //     sink.append(source);
+    // }
+    // sink.play();
     //stream_handle.play_raw(source.convert_samples());
     // The sound plays in a separate audio thread,
     // so we need to keep the main thread alive while it's playing.
@@ -473,8 +502,6 @@ fn main() {
     engine2d::run(WIDTH, HEIGHT, window_builder, rsrc, levels, game, draw_game, update_game);
 }
 
-
-
 fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, screen: &mut Screen, frame:usize) {
     screen.clear(Rgba(80, 80, 80, 255));
     screen.set_scroll(state.camera);
@@ -482,15 +509,68 @@ fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, scree
     // for ((pos,tex),anim) in state.positions.iter().zip(state.textures.iter()).zip(state.anim_state.iter()) {
     //     screen.bitblt(tex,anim.frame(),*pos);
     // }
-    state.mode.display(&state, screen,levels);
+    state.mode.display(&state, screen, levels);
 }
 
 fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState, input: &WinitInputHelper, frame: usize) {
     state.mode = state.mode.update(state, input);
     // Detect collisions: Convert positions and sizes to collision bodies, generate contacts
-
+    let contacts = engine2d::collision::gather_contacts(&state.positions, &state.sizes);
     // Handle collisions: Apply restitution impulses.
+    for contact in contacts.iter() {
+        match contact {
+            Contact { 
+                a: 0,
+                b: 3,
+                mtv: (i1, i2)
+            } => {
+                if state.positions[0].0 > state.positions[3].0 {
+                    state.positions[0].0 += i1;
+                } else {
+                    state.positions[0].0 -= i1;
+                }
+            }
+            Contact { 
+                a: 0,
+                b: 2,
+                mtv: (i1, i2)
+            } => {
+                if state.velocities[0].0 != 0{
+                    if state.positions[0].0 > state.positions[2].0 {
+                        state.positions[0].0 += i1;
+                    } else {
+                        state.positions[0].0 -= i1;
+                    }
+                }
+                if state.velocities[0].1 != 0 {
+                    if state.positions[0].1 > state.positions[2].1 {
+                        state.positions[0].1 += i2;
+                    } else {
+                        state.positions[0].1 -= i2;
+                    }
+                }
+            }
+            Contact { 
+                a: 0,
+                b: 1,
+                mtv: (i1, i2)
+            } => {
+                state.movable = false;
+                // let (_, temp_stream_handle) = OutputStream::try_default().unwrap();
+                // let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
+                // let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
+                // temp_stream_handle.play_raw(temp_source.convert_samples());
 
+                let ten_millis = time::Duration::from_millis(1000);
+                thread::sleep(ten_millis);
+                state.positions[0].0 = 9*16;
+                state.positions[0].1 = 0;
+                state.camera = Vec2i(0, 0);
+                state.movable = true;
+            }
+            _ => {}
+        }
+    }
     // Update game rules: What happens when the player touches things?  When enemies touch walls?  Etc.
 
     // Maybe scroll the camera or change level
