@@ -32,7 +32,8 @@ const HEIGHT: usize = 16*20;
 enum EntityType {
     Player,
     Enemy,
-    Blocker
+    Blocker, 
+    HBlocker
 }
 
 type Level = (Tilemap, Vec<(EntityType, i32, i32)>);
@@ -383,7 +384,7 @@ fn main() {
                 (EntityType::Player, 20, 20),
                 (EntityType::Enemy, 10, 13),
                 (EntityType::Blocker, 5, 13), 
-                (EntityType::Blocker, 4, 3),
+                (EntityType::HBlocker, 4, 3),
             ]
         ),
 
@@ -519,55 +520,42 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
     // Handle collisions: Apply restitution impulses.
     // Update game rules: What happens when the player touches things? When enemies touch walls? Etc.
     for contact in contacts.iter() {
-        match contact {
-            Contact { 
-                a: 0,
-                b: 3,
-                mtv: (i1, i2)
-            } => {
-                if state.positions[0].0 > state.positions[3].0 {
-                    state.positions[0].0 += i1;
-                } else {
-                    state.positions[0].0 -= i1;
-                }
-            }
-            Contact { 
-                a: 0,
-                b: 2,
-                mtv: (i1, i2)
-            } => {
-                if state.velocities[0].0 != 0{
-                    if state.positions[0].0 > state.positions[2].0 {
-                        state.positions[0].0 += i1+1;
-                    } else {
-                        state.positions[0].0 -= i1+1;
-                    }
-                }
-                if state.velocities[0].1 != 0 {
-                    if state.positions[0].1 > state.positions[2].1 {
-                        state.positions[0].1 += i2+1;
-                    } else {
-                        state.positions[0].1 -= i2+1;
-                    }
-                }
-            }
-            Contact { 
-                a: 0,
-                b: 1,
-                mtv: (i1, i2)
-            } => {
+        match (levels[state.level].1[contact.a].0, levels[state.level].1[contact.b].0) {
+            (EntityType::Player, EntityType::Enemy) => {
                 state.movable = false;
                 // let (_, temp_stream_handle) = OutputStream::try_default().unwrap();
                 // let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
                 // let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
                 // temp_stream_handle.play_raw(temp_source.convert_samples());
-
                 let ten_millis = time::Duration::from_millis(1000);
                 thread::sleep(ten_millis);
                 state.positions[0].0 = 9*16;
                 state.positions[0].1 = 0;
                 state.camera = Vec2i(0, 0);
                 state.movable = true;
+            }
+            (EntityType::Player, EntityType::Blocker) => {
+                if state.velocities[0].0 != 0{
+                    if state.positions[0].0 > state.positions[2].0 {
+                        state.positions[0].0 += contact.mtv.0;
+                    } else {
+                        state.positions[0].0 -= contact.mtv.0;
+                    }
+                }
+                if state.velocities[0].1 != 0 {
+                    if state.positions[0].1 > state.positions[2].1 {
+                        state.positions[0].1 += contact.mtv.1;
+                    } else {
+                        state.positions[0].1 -= contact.mtv.1;
+                    }
+                }
+            }
+            (EntityType::Player, EntityType::HBlocker) => {
+                if state.positions[0].0 > state.positions[3].0 {
+                    state.positions[0].0 += contact.mtv.0;
+                } else {
+                    state.positions[0].0 -= contact.mtv.0;
+                }
             }
             _ => {}
         }

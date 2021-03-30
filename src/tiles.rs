@@ -63,7 +63,7 @@ pub struct Tilemap {
     /// Which tileset is used for this tilemap
     tileset: Rc<Tileset>,
     /// A row-major grid of tile IDs in tileset
-    map: Vec<TileID>,
+    pub map: Vec<TileID>,
 }
 impl Tilemap {
     pub fn new(
