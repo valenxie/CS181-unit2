@@ -7,8 +7,8 @@ pub struct Animation {
     // But then there's also dynamic data, which might live in this struct or might live somewhere else
     // An Animation/AnimationState split could be fine, if AnimationState holds the start time and the present frame (or just the start time) and possibly a reference to the Animation
     // but there are lots of designs that will work!
-    frames: Vec<(Rect, usize)>,
-    looping: bool,
+    pub frames: Vec<(Rect, usize)>,
+    pub looping: bool,
 }
 
 impl Animation {
