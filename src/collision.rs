@@ -104,10 +104,10 @@ fn gather_contacts_tilemap(positions: &Vec<Vec2i>, sizes: &Vec<(usize,usize)>,ti
                                           Vec2i(positions[i].0+sizes[i].0 as i32,positions[i].1), //x+w,y
                                           Vec2i(positions[i].0,positions[i].1+sizes[i].1 as i32), //x,y+h
                                           Vec2i(positions[i].0+sizes[i].0 as i32,positions[i].1+sizes[i].1 as i32)].iter().filter_map(|pos| tm.tile_at(*pos)){
-                let Some((tile,rect))=tm.tile_at(*pos);
+                if let Some((tile,rect))=tm.tile_at(*pos) { /* */ }
                 if tile.solid{
                     if let Some(disp)=rect_displacement(rect1, rect){
-                        into.push(Contact{a:i,b:(tile,rect),mtv:disp})
+                        into.push(Contact{a:i,b:TileContact { tile: tile, rect: rect },mtv:disp})
                     }
                 }
             }          
