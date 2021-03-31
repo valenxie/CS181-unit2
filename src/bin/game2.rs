@@ -23,7 +23,10 @@ const HEIGHT: usize = 256;
 #[derive(Clone,Copy,PartialEq,Eq,Debug)]
 enum EntityType {
     Player,
-    Enemy
+    Enemy,
+    Barrier,
+    lvl1Exit,
+
 }
 
 type Level = (Vec<Tilemap>, Vec<(EntityType, i32, i32)>);
@@ -57,28 +60,55 @@ impl Mode {
                 //     } 
                 if input.key_held(VirtualKeyCode::Right) {
                     if game.camera.0 < 256{
-                        game.positions[0].0 += 2;
+                        // game.velocities[0].0 = 1;
+                        game.positions[1].0 +=2;
                         game.camera.0+=1;
+                    }
+                    else{
+                        game.velocities[1].0 = 0;
                     }      
+                }else{
+                    game.velocities[0].0 = 0;
                 }
                 if input.key_held(VirtualKeyCode::Left) {
                     if game.camera.0 > -256{
-                        game.positions[0].0 -= 2;
+                        // game.velocities[0].0 = -1;
+                        game.positions[1].0 -=2;
                         game.camera.0-=1;
                     }
+                    else{
+                        game.velocities[0].0 = 0;
+                    }
+                }else{
+                    game.velocities[0].0 = 0;
                 }
                 if input.key_held(VirtualKeyCode::Up) {
                     if game.camera.1 > -256{
-                        game.positions[0].1 -= 2;
+                        // game.velocities[0].1 = -1;
+                        game.positions[1].1 -=2;
                         game.camera.1-=1;
+                    }else{
+                        game.velocities[0].1 = 0;
                     }   
+                }else{
+                    game.velocities[0].0 = 0;
                 }
                 if input.key_held(VirtualKeyCode::Down) {
                     if game.camera.1 < 0{
-                        game.camera.1+=1; 
-                        game.positions[0].1 += 2;
+                        // game.velocities[0].1 = 1;
+                        game.positions[1].1 +=2;
+                        game.camera.1+=1;                        
                     }
-                } 
+                    else{
+                        game.velocities[0].1 = 0;
+                    }
+                }else{
+                    game.velocities[0].0 = 0;
+                }
+                // for (posn, vel) in game.positions.iter_mut().zip(game.velocities.iter()) {
+                //     posn.0 += vel.0;
+                //     posn.1 += vel.1;
+                // }
                 if input.key_held(VirtualKeyCode::Q){
                     Mode::EndGame
                 } else {
@@ -419,13 +449,16 @@ fn main() {
         Vec2i(256, -256),
         (16, 16),
         &lvl1tileset,
+        //40, 41, 42, 43,
+        //45, 46, 47, 48,
+        //50, 51, 52, 53,
         vec![
-            16, 16, 16, 17, 130, 130, 130, 130, 130, 130, 130, 15, 40, 41, 42, 43, 
-            21, 21, 21, 22, 130, 130, 130, 130, 130, 130, 130, 20, 45, 46, 47, 48,
-            26, 26, 26, 27, 130, 130, 130, 130, 130, 130, 130, 25, 50, 51, 52, 53,
+            16, 16, 16, 17, 130, 130, 130, 130, 130, 130, 130, 15, 16, 16, 16, 17, 
+            21, 21, 21, 22, 130, 130, 130, 130, 130, 130, 130, 20, 21, 21, 21, 22,
+            26, 26, 26, 27, 130, 130, 130, 130, 130, 130, 130, 25, 26, 26, 26, 27,
             1, 1, 1, 2, 130, 130, 130, 130, 130, 130, 130, 0, 1, 1, 1, 1,
-            6, 30, 31, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
-            6, 35, 36, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
+            6, 6, 6, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
+            6, 6, 6, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
             11, 11, 11, 12, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 11, 11,
             130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 5, 6, 7, 130, 130,  
             130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 5, 6, 7, 130, 130,
@@ -492,17 +525,16 @@ fn main() {
     let levels:Vec<Level> = vec![
         (vec![start_screen],   
        // Initial entities on level start
-         vec![
-            (EntityType::Player, 8, 13),
-            (EntityType::Enemy, 100, 100)
-            ]
+         vec![]
          ),
 
         (vec![lvl1map1_1,lvl1map1_2,lvl1map1_3,lvl1map1_4,lvl1map1_5,lvl1map1_6],
             // Initial entities on level start
          vec![
+            (EntityType::Barrier, 17,-12),
             (EntityType::Player, 8, 13),
-            (EntityType::Enemy, 100, 100)
+            (EntityType::Enemy, 20, 20),
+            (EntityType::lvl1Exit, 27,-16)
             ]
         ), 
 
@@ -513,10 +545,14 @@ fn main() {
             ]
         ),   
     ];
+    let barrier_tex = rsrc.load_texture(Path::new("content/barrier.png"));
+    let barrier_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
     let player_tex = rsrc.load_texture(Path::new("content/player.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
+    let lvl1exit_tex = rsrc.load_texture(Path::new("content/lvl1exit.png"));
+    let lvl1exit_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:48}));
 
     // And here's our game state, which is just stuff that changes.
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
@@ -526,25 +562,37 @@ fn main() {
         // Assume entity 0 is the player
         types: vec![
             // In a real example we'd provide nicer accessors than this
-            levels[0].1[0].0,
-            levels[0].1[1].0,
+            levels[1].1[0].0,
+            levels[1].1[1].0,
+            levels[1].1[2].0,
+            levels[1].1[3].0,
         ],
         positions: vec![
             Vec2i(
-                levels[0].1[0].1 * 16,
-                levels[0].1[0].2 * 16,
+                levels[1].1[0].1 * 16,
+                levels[1].1[0].2 * 16,
             ),
             Vec2i(
-                levels[0].1[1].1 * 16,
-                levels[0].1[1].2 * 16,
+                levels[1].1[1].1 * 16,
+                levels[1].1[1].2 * 16,
+            ),
+            Vec2i(
+                levels[1].1[2].1 * 16,
+                levels[1].1[2].2 * 16,
+            ),
+            Vec2i(
+                levels[1].1[3].1 * 16,
+                levels[1].1[3].2 * 16,
             )
         ],
-        velocities: vec![Vec2i(0,0), Vec2i(0,0)],
-        sizes: vec![(16,16), (16,16)],
+        velocities: vec![Vec2i(0,0), Vec2i(0,0),Vec2i(0,0), Vec2i(0,0)],
+        sizes: vec![(16,16), (16,16),(16,16), (16,16)],
         // Could be texture handles instead, let's talk about that in two weeks
-        textures: vec![Rc::clone(&player_tex),
-                       Rc::clone(&enemy_tex)],
-        anim_state: vec![player_anim.start(), enemy_anim.start()],
+        textures: vec![Rc::clone(&barrier_tex),
+                       Rc::clone(&player_tex),
+                       Rc::clone(&enemy_tex),
+                       Rc::clone(&lvl1exit_tex)],
+        anim_state: vec![barrier_anim.start(),player_anim.start(), enemy_anim.start(),lvl1exit_anim.start()],
         // Current level
         level: 0,
         // Camera position
@@ -571,11 +619,6 @@ fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, scree
 fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState, input: &WinitInputHelper, frame: usize) {
     // Determine enemy velocity
 
-    // Update all entities' positions
-    for (posn, vel) in state.velocities.iter_mut().zip(state.positions.iter()) {
-        posn.0 += vel.0;
-        posn.1 += vel.1;
-    }
     state.mode = state.mode.update(state, input);
     // Detect collisions: Convert positions and sizes to collision bodies, generate contacts
 

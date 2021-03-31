@@ -421,7 +421,7 @@ fn main() {
 //     ]
 // )
     ];
-    let player_tex = rsrc.load_texture(Path::new("content/jack/reaper.png"));
+    let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));

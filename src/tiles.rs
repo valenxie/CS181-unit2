@@ -85,10 +85,13 @@ impl Tilemap {
         }
     }
 
-    pub fn tile_id_at(&self, Vec2i(x, y): Vec2i) -> TileID {
+    pub fn tile_id_at(&self, Vec2i(x, y): Vec2i) -> (TileID,Rect) {
         // Translate into map coordinates
         let x = (x - self.position.0) / TILE_SZ as i32;
         let y = (y - self.position.1) / TILE_SZ as i32;
+        let rect_x = x*TILE_SZ as i32+self.position.0;
+        let rect_y = y*TILE_SZ as i32+self.position.1;
+
         assert!(
             x >= 0 && x < self.dims.0 as i32,
             "Tile X coordinate {} out of bounds {}",
@@ -101,14 +104,17 @@ impl Tilemap {
             y,
             self.dims.1
         );
-        self.map[y as usize * self.dims.0 + x as usize]
+        (self.map[y as usize * self.dims.0 + x as usize],
+         Rect { x: rect_x, y: rect_y, w: TILE_SZ as u16, h: TILE_SZ as u16})
+
     }
     
     pub fn size(&self) -> (usize, usize) {
         self.dims
     }
-    pub fn tile_at(&self, posn: Vec2i) -> Tile {
-        self.tileset[self.tile_id_at(posn)]
+    pub fn tile_at(&self, posn: Vec2i) -> Option<(Tile,Rect)> {
+        let (tile_id,rect)=self.tile_id_at(posn);
+        Some((self.tileset[tile_id],rect))
     }
     // ...
     /// Draws the portion of self appearing within screen.
