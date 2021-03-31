@@ -110,7 +110,8 @@ fn gather_contacts_tilemap(positions: &Vec<Vec2i>, sizes: &Vec<(usize,usize)>,ti
                         into.push(Contact{a:i,b:TileContact { tile: tile, rect: rect },mtv:disp})
                     }
                 }
-            }          
+            }     
+                 
         }
     }
     return into;
