@@ -98,6 +98,7 @@ impl Mode {
                         } else {
                             game.velocities[0].1 = 0;
                         }
+        
                         if game.positions[0].1 <= game.camera.1+16*5 && 
                             game.camera.1 > 0 {
                             game.camera.1 -= 1;
@@ -108,6 +109,7 @@ impl Mode {
                         } else {
                             game.velocities[0].1 = 0;
                         }
+                    
                         if game.positions[0].1 >= game.camera.1+16*5 && 
                             game.camera.1 < 10*16 {
                             game.camera.1 += 1;
