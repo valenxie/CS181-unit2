@@ -5,8 +5,6 @@ use std::rc::Rc;
 use crate::animation::*;
 use crate::tiles::*;
 
-
-
 // impl Contact {
 //     pub fn get_ids(&self) -> (ContactID, ContactID) {
 //         (self.0, self.1)
@@ -115,32 +113,38 @@ pub fn gather_contacts_tilemap(positions: &Vec<Vec2i>, sizes: &Vec<(usize,usize)
     }
     return into;
 }
-pub fn restitute(positions: &mut Vec<Vec2i>, sizes: &Vec<(usize,usize)>, contacts: &mut Vec<Contact<usize,TileContact>>) {
-    // handle restitution of dynamics against dynamics and dynamics against statics wrt contacts.
-    // You could instead make contacts `Vec<Contact>` if you think you might remove contacts.
-    // You could also add an additional parameter, a slice or vec representing how far we've displaced each dynamic, to avoid allocations if you track a vec of how far things have been moved.
-    // You might also want to pass in another &mut Vec<Contact> to be filled in with "real" touches that actually happened.
-    contacts.sort_unstable_by_key(|c| -(c.mtv.0 * c.mtv.0 + c.mtv.1 * c.mtv.1));
-    // Keep going!  Note that you can assume every contact has a dynamic object in .a.
-    // You might decide to tweak the interface of this function to separately take dynamic-static and dynamic-dynamic contacts, to avoid a branch inside of the response calculation.
-    // Or, you might decide to calculate signed mtvs taking direction into account instead of the unsigned displacements from rect_displacement up above.  Or calculate one MTV per involved entity, then apply displacements to both objects during restitution (sorting by the max or the sum of their magnitudes)
-    for c in contacts.iter(){
-        if let Some((x,y)) = rect_displacement(a_rect, c.b.rect){
-            if x > y {
-                if positions[c.a].1 < c.b.rect.y{
-                    c.b.rect.y += y
-                } else {
-                    c.b.rect.y -= y
-            }
-        }
-        else {
-            if positions[c.a].0 < c.b.rect.x  {
-                c.b.rect.x += x
-                } else {
-                    c.b.rect.x -= x
+// pub fn restitute(positions: &mut Vec<Vec2i>, sizes: &Vec<(usize,usize)>, contacts: &mut Vec<Contact<usize,TileContact>>) {
+//     // handle restitution of dynamics against dynamics and dynamics against statics wrt contacts.
+//     // You could instead make contacts `Vec<Contact>` if you think you might remove contacts.
+//     // You could also add an additional parameter, a slice or vec representing how far we've displaced each dynamic, to avoid allocations if you track a vec of how far things have been moved.
+//     // You might also want to pass in another &mut Vec<Contact> to be filled in with "real" touches that actually happened.
+//     contacts.sort_unstable_by_key(|c| -(c.mtv.0 * c.mtv.0 + c.mtv.1 * c.mtv.1));
+//     // Keep going!  Note that you can assume every contact has a dynamic object in .a.
+//     // You might decide to tweak the interface of this function to separately take dynamic-static and dynamic-dynamic contacts, to avoid a branch inside of the response calculation.
+//     // Or, you might decide to calculate signed mtvs taking direction into account instead of the unsigned displacements from rect_displacement up above.  Or calculate one MTV per involved entity, then apply displacements to both objects during restitution (sorting by the max or the sum of their magnitudes)
+//     for c in contacts.iter(){
+//         let a_rect = Rect {
+//             x: positions[c.a].0,
+//             y: positions[c.a].1,
+//             w: sizes[c.a].0 as u16,
+//             h: sizes[c.a].1 as u16,
+//         };
+//         if let Some((x,y)) = rect_displacement(a_rect, c.b.rect){
+//             if x > y {
+//                 if positions[c.a].1 < c.b.rect.y{
+//                     c.b.rect.y += y
+//                 } else {
+//                     c.b.rect.y -= y
+//             }
+//         }
+//         else {
+//             if positions[c.a].0 < c.b.rect.x  {
+//                 c.b.rect.x += x
+//                 } else {
+//                     c.b.rect.x -= x
                     
-                }
-            }
-        }
-    }
-}
+//                 }
+//             }
+//         }
+//     }
+// }

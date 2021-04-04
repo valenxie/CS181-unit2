@@ -1,12 +1,14 @@
 use crate::texture::Texture;
 use crate::animation::Animation;
 use crate::types::Rect;
+use crate::text::{self, DrawTextExt};
 use std::path::Path;
 use std::rc::Rc;
 
 pub struct Resources{
     pub animation: Vec<Rc<Animation>>,
     pub textures: Vec<Rc<Texture>>,
+    // pub text_data:text::TextData,
     //text
 }
 impl Resources {
