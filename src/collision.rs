@@ -125,22 +125,22 @@ pub fn restitute(positions: &mut Vec<Vec2i>, sizes: &Vec<(usize,usize)>, contact
     // You might decide to tweak the interface of this function to separately take dynamic-static and dynamic-dynamic contacts, to avoid a branch inside of the response calculation.
     // Or, you might decide to calculate signed mtvs taking direction into account instead of the unsigned displacements from rect_displacement up above.  Or calculate one MTV per involved entity, then apply displacements to both objects during restitution (sorting by the max or the sum of their magnitudes)
     for c in contacts.iter(){
-        let (x, y) = contacts[0].mtv;
-        if x != 0 && y != 0 {
+        if let Some((x,y)) = rect_displacement(a_rect, c.b.rect){
             if x > y {
-                if positions[0].1 < positions[1].1{
-                    positions[1].1 += y
+                if positions[c.a].1 < c.b.rect.y{
+                    c.b.rect.y += y
                 } else {
-                    positions[1].1 -= y
-                    }
-                }
+                    c.b.rect.y -= y
+            }
+        }
         else {
-            if positions[0].0 < positions[1].0  {
-                positions[1].0  += x
+            if positions[c.a].0 < c.b.rect.x  {
+                c.b.rect.x += x
                 } else {
-                    positions[1].0  -= x
-                    }
+                    c.b.rect.x -= x
+                    
                 }
             }
         }
     }
+}
