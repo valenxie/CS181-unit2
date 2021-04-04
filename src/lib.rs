@@ -11,6 +11,7 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 pub mod types;
+mod text;
 use types::{Rgba, Vec2i};
 pub mod graphics;
 use graphics::Screen;
