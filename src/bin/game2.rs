@@ -138,9 +138,10 @@ impl Mode {
                             
                         }
                         (EntityType::Player, EntityType::lvl1Exit) => {
-                            game.movable = false;
+                            // game.movable = false;
+                            game.level = 1;
                             game.mode= Mode::Lvl2;
-                            Mode::Lvl2;
+                            // Mode::Lvl2;
                         }
                         _ => {}
                     }       

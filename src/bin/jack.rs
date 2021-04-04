@@ -59,13 +59,21 @@ impl Mode {
     fn update(self, game:&mut GameState, input:&Input) -> Self {
         match self {
             Mode::Title => {
-                if input.key_held(VirtualKeyCode::P){
+                // if input.mouse()!=None {
+                //     println!("{}, {}", input.mouse().unwrap().0, input.mouse().unwrap().1);
+                // }
+                if input.key_held(VirtualKeyCode::P) || 
+                   input.key_held(VirtualKeyCode::Return) ||
+                   (input.mouse()!=None && input.mouse().unwrap().0 > 16.0*15.0
+                   && input.mouse().unwrap().0 < 16.0*28.0 && input.mouse().unwrap().1 > 16.0*12.0
+                   && input.mouse().unwrap().1 < 16.0*15.0
+                   && input.mouse_pressed(0))
+                {
                     game.level=1;
                     Mode::Play(PlayMode::Map)
                 } else {
                     self
                 }
-                // If the mouse clicked and it's in a certain area, then ...
             },
             Mode::Play(pm) => {
                 // All velocities
@@ -158,7 +166,7 @@ impl Mode {
                     let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
                     game.soundstream.1.play_raw(temp_source.convert_samples()).unwrap();
 
-                    let ten_millis = time::Duration::from_millis(1000);
+                    let ten_millis = time::Duration::from_millis(500);
                     thread::sleep(ten_millis);
                     game.positions[0].0 = 9*16;
                     game.positions[0].1 = 0;
@@ -315,7 +323,7 @@ fn main() {
     ));
 
     let tileset_title = Rc::new(Tileset::new(
-        vec![
+        vec![ // Exactly 104 tiles. Which is 208 x 128 / (16 x 16)
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
@@ -325,6 +333,57 @@ fn main() {
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
@@ -337,12 +396,12 @@ fn main() {
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
         ],
-        &rsrc.load_texture(Path::new("content/jack/title.png"))
+        &rsrc.load_texture(Path::new("content/jack/ahaha.png"))
     ));
 
     // Here's our game rules (the engine doesn't know about these)
     let levels:Vec<Level> = vec![
-        // Opening Screen
+        // Title Screen
         (Tilemap::new(
             Vec2i(0,0),
             // Map size
@@ -356,7 +415,7 @@ fn main() {
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+                1,  1,  1,  1,  1,  1,  1,  1,  212,178,156,230,1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
