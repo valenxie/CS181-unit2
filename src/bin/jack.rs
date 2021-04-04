@@ -98,6 +98,7 @@ impl Mode {
                         } else {
                             game.velocities[0].1 = 0;
                         }
+        
                         if game.positions[0].1 <= game.camera.1+16*5 && 
                             game.camera.1 > 0 {
                             game.camera.1 -= 1;
@@ -108,6 +109,7 @@ impl Mode {
                         } else {
                             game.velocities[0].1 = 0;
                         }
+                    
                         if game.positions[0].1 >= game.camera.1+16*5 && 
                             game.camera.1 < 10*16 {
                             game.camera.1 += 1;
@@ -422,7 +424,7 @@ fn main() {
 //     ]
 // )
     ];
-    let player_tex = rsrc.load_texture(Path::new("content/jack/reaper.png"));
+    let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));

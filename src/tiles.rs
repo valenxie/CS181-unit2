@@ -85,30 +85,27 @@ impl Tilemap {
         }
     }
 
-    pub fn tile_id_at(&self, Vec2i(x, y): Vec2i) -> TileID {
+    pub fn tile_id_at(&self, Vec2i(x, y): Vec2i) -> Option<(TileID,Rect)> {
         // Translate into map coordinates
         let x = (x - self.position.0) / TILE_SZ as i32;
         let y = (y - self.position.1) / TILE_SZ as i32;
-        assert!(
-            x >= 0 && x < self.dims.0 as i32,
-            "Tile X coordinate {} out of bounds {}",
-            x,
-            self.dims.0
-        );
-        assert!(
-            y >= 0 && y < self.dims.1 as i32,
-            "Tile Y coordinate {} out of bounds {}",
-            y,
-            self.dims.1
-        );
-        self.map[y as usize * self.dims.0 + x as usize]
+        let rect_x = x*TILE_SZ as i32+self.position.0;
+        let rect_y = y*TILE_SZ as i32+self.position.1;
+
+        if y >= 0 && y < self.dims.1 as i32 &&  x >= 0 && x < self.dims.0 as i32{
+            Some((self.map[y as usize * self.dims.0 + x as usize],
+                Rect { x: rect_x, y: rect_y, w: TILE_SZ as u16, h: TILE_SZ as u16}))
+        }else{
+            None
+        }
+
     }
     
     pub fn size(&self) -> (usize, usize) {
         self.dims
     }
-    pub fn tile_at(&self, posn: Vec2i) -> Tile {
-        self.tileset[self.tile_id_at(posn)]
+    pub fn tile_at(&self, posn: Vec2i) -> Option<(Tile,Rect)> {
+        self.tile_id_at(posn).map(|(t,r)| (self.tileset[t], r))
     }
     // ...
     /// Draws the portion of self appearing within screen.
