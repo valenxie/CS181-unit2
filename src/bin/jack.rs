@@ -230,7 +230,7 @@ impl PlayMode {
         }
     }
 }
-struct GameState{
+struct GameState {
     // Every entity has a position, a size, a texture, and animation state.
     // Assume entity 0 is the player
     // Current level
@@ -244,7 +244,8 @@ struct GameState{
     // Camera position
     camera:Vec2i,
     mode:Mode, 
-    movable:bool,
+    movable:bool, 
+    soundstream: (rodio::OutputStream, rodio::OutputStreamHandle),
 }
 
 fn main() {
@@ -435,6 +436,8 @@ fn main() {
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
     // State here will stitch them all together.
     let mut game = GameState{
+        // Put an output stream here! *** 
+
         // Current level
         level: 0,
         // Every entity has a position, a size, a texture, and animation state.
@@ -477,14 +480,15 @@ fn main() {
         camera: Vec2i(0, 0),
         mode:Mode::Title, 
         movable: true,
+        soundstream: OutputStream::try_default().unwrap(),
     };
 
     // Music and Sound
     // Get a output stream handle to the default physical sound device
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
     let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
-    //stream_handle.play_raw(source.convert_samples());
+    // game.soundstream.play_raw(source.convert_samples());
     // let sink = Sink::try_new(&stream_handle).unwrap();
     // for i in 1..10 {
     //     // Load a sound from a file, using a path relative to Cargo.toml
@@ -524,11 +528,11 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
             (EntityType::Player, EntityType::Enemy) => {
                 state.movable = false;
                 // let (_, temp_stream_handle) = OutputStream::try_default().unwrap();
-                // let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
-                // let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
-                // temp_stream_handle.play_raw(temp_source.convert_samples());
+                let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
+                let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
+                state.soundstream.1.play_raw(temp_source.convert_samples()).unwrap();
                 let ten_millis = time::Duration::from_millis(1000);
-                thread::sleep(ten_millis);
+                // thread::sleep(ten_millis);
                 state.positions[0].0 = 9*16;
                 state.positions[0].1 = 0;
                 state.camera = Vec2i(0, 0);
