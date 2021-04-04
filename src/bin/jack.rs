@@ -33,7 +33,8 @@ enum EntityType {
     Player,
     Enemy,
     Blocker, 
-    HBlocker
+    HBlocker,
+    Destination,
 }
 
 type Level = (Tilemap, Vec<(EntityType, i32, i32)>);
@@ -67,7 +68,7 @@ impl Mode {
                 // If the mouse clicked and it's in a certain area, then ...
             },
             Mode::Play(pm) => {
-                // Player moves
+                // All velocities
                 if game.movable {
                     // Option-based approach; PlayMode decides what to change into.
                     // Could return a Transition enum instead
@@ -79,13 +80,13 @@ impl Mode {
                     // Player control goes here
                     if input.key_held(VirtualKeyCode::Right) {
                         if game.positions[0].0 < 16*19 {
-                            game.velocities[0].0 = 1;
+                            game.velocities[0].0 = 2;
                         } else {
                             game.velocities[0].0 = 0;
                         }
                     } else if input.key_held(VirtualKeyCode::Left) {
                         if game.positions[0].0 > 0 {
-                            game.velocities[0].0 = -1;
+                            game.velocities[0].0 = -2;
                         } else {
                             game.velocities[0].0 = 0;
                         }
@@ -94,25 +95,25 @@ impl Mode {
                     }
                     if input.key_held(VirtualKeyCode::Up) {
                         if game.positions[0].1 > 0 {
-                            game.velocities[0].1 = -1;
+                            game.velocities[0].1 = -2;
                         } else {
                             game.velocities[0].1 = 0;
                         }
         
                         if game.positions[0].1 <= game.camera.1+16*5 && 
                             game.camera.1 > 0 {
-                            game.camera.1 -= 1;
+                            game.camera.1 -= 2;
                         }
                     } else if input.key_held(VirtualKeyCode::Down) {
                         if game.positions[0].1 < 28*16 {
-                            game.velocities[0].1 = 1;
+                            game.velocities[0].1 = 2;
                         } else {
                             game.velocities[0].1 = 0;
                         }
                     
                         if game.positions[0].1 >= game.camera.1+16*5 && 
                             game.camera.1 < 10*16 {
-                            game.camera.1 += 1;
+                            game.camera.1 += 2;
                         }
                     } else {
                         game.velocities[0].1 = 0;
@@ -126,9 +127,23 @@ impl Mode {
                     game.velocities[3].0 *= -1;
                 }
 
-                // Determine enemy velocity
+                // Determine enemy velocity - chasing the character
+                if square(game.positions[1].0-game.positions[0].0)+square(game.positions[1].1-game.positions[0].1) <= 8000 {
+                    if game.positions[1].0 > game.positions[0].0 {
+                        game.velocities[1].0 = -1;
+                    } else {
+                        game.velocities[1].0 = 1;
+                    }
+                    if game.positions[1].1 > game.positions[0].1 {
+                        game.velocities[1].1 = -1;
+                    } else {
+                        game.velocities[1].1 = 1;
+                    }
+                } else {
+                    game.velocities[1] = Vec2i(0,0);
+                }
 
-                // Update all entities' positions
+                // Update all positions
                 for (posn, vel) in game.positions.iter_mut().zip(game.velocities.iter()) {
                     posn.0 += vel.0;
                     posn.1 += vel.1;
@@ -137,15 +152,17 @@ impl Mode {
                 // Die and return to start if touches fire
                 if game.positions[0].0 <= 1*16 || game.positions[0].0 >= 17*16+8 {
                     game.movable = false;
+                    // Play the explosion sound 
                     let (_, temp_stream_handle) = OutputStream::try_default().unwrap();
                     let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
                     let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
-                    temp_stream_handle.play_raw(temp_source.convert_samples());
+                    game.soundstream.1.play_raw(temp_source.convert_samples()).unwrap();
 
                     let ten_millis = time::Duration::from_millis(1000);
                     thread::sleep(ten_millis);
                     game.positions[0].0 = 9*16;
                     game.positions[0].1 = 0;
+                    game.positions[1] = Vec2i(10*16, 25*16); 
                     game.camera = Vec2i(0, 0);
                     game.movable = true;
                 }
@@ -184,7 +201,7 @@ impl Mode {
     }
 }
 impl PlayMode {
-    fn update(self, _game:&mut GameState, input:&Input)-> Option<Self> {// 
+    fn update(self, _game:&mut GameState, input:&Input) -> Option<Self> {// 
         match self {
             PlayMode::Map => {
                 if input.key_held(VirtualKeyCode::M){
@@ -297,6 +314,32 @@ fn main() {
         &rsrc.load_texture(Path::new("content/jack/collage.png"))
     ));
 
+    let tileset_title = Rc::new(Tileset::new(
+        vec![
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},           
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+        ],
+        &rsrc.load_texture(Path::new("content/jack/title.png"))
+    ));
+
     // Here's our game rules (the engine doesn't know about these)
     let levels:Vec<Level> = vec![
         // Opening Screen
@@ -304,7 +347,7 @@ fn main() {
             Vec2i(0,0),
             // Map size
             (20, 20),
-            &tileset,
+            &tileset_title,
             // Tile grid
             vec![
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
@@ -382,61 +425,65 @@ fn main() {
                 3,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  3, 
                 ],     
             ),
-            // Initial entities on level start
+            // Plug in entities
             vec![
-                (EntityType::Player, 20, 20),
-                (EntityType::Enemy, 10, 13),
+                (EntityType::Player, 10, 0),
+                (EntityType::Enemy, 10, 25),
                 (EntityType::Blocker, 5, 13), 
                 (EntityType::HBlocker, 4, 3),
+                (EntityType::Destination, 9, 27),
             ]
         ),
 
-//     (Tilemap::new(
-//         Vec2i(0,0),
-//         // Map size
-//         (16, 16),
-//         &tileset1,
-//         // Tile grid
-//         vec![
-//             0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-//             2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-//             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-//         ],     
-        
-//     ),
-//     // Initial entities on level start
-//     vec![
-//         (EntityType::Player, 0, 0),
-//         (EntityType::Enemy, 20, 0)
-//     ]
-// )
+    (Tilemap::new(
+        Vec2i(0,0),
+        // Map size
+        (20, 20),
+        &tileset_title,
+        // Tile grid
+        vec![
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+        ],  
+    ),
+    // Initial entities on level start
+    vec![
+        (EntityType::Player, 0, 0),
+        (EntityType::Enemy, 20, 0)
+    ]
+)
     ];
+    // tex and anim
     let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
     let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
-    let enemy_tex = Rc::clone(&player_tex);
+    let enemy_tex = rsrc.load_texture(Path::new("content/jack/small_link.png"));
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));
     let blocker_tex = rsrc.load_texture(Path::new("content/jack/stone.png"));
     let blocker_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:25}));
     let red_tex = rsrc.load_texture(Path::new("content/jack/red_rectangle.png"));
     let red_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
-    // ... more
+    let dest_tex = rsrc.load_texture(Path::new("content/lvl1exit.png"));
+    let dest_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:48}));
 
-    // And here's our game state, which is just stuff that changes.
-    // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
-    // State here will stitch them all together.
+    // game state definition
     let mut game = GameState{
         // Put an output stream here! *** 
 
@@ -450,6 +497,7 @@ fn main() {
             levels[1].1[1].0,
             levels[1].1[2].0,
             levels[1].1[3].0,
+            levels[1].1[4].0,
         ],
         positions: vec![
             Vec2i(
@@ -468,16 +516,21 @@ fn main() {
                 levels[1].1[3].1 * 16,
                 levels[1].1[3].2 * 16,
             ),
+            Vec2i(
+                levels[1].1[4].1 * 16,
+                levels[1].1[4].2 * 16,
+            ),
         ],
-        velocities: vec![Vec2i(0,0), Vec2i(0,0), Vec2i(0,0), Vec2i(1,0)],
-        sizes: vec![(16,16), (16,16), (16,16), (32,32)],
+        velocities: vec![Vec2i(0,0), Vec2i(0,0), Vec2i(0,0), Vec2i(1,0), Vec2i(0,0)],
+        sizes: vec![(16,16), (16,16), (16,16), (32,32), (48,48)],
         // Could be texture handles instead, let's talk about that in two weeks
         textures: vec![Rc::clone(&player_tex),
                        Rc::clone(&enemy_tex), 
                        Rc::clone(&blocker_tex),
                        Rc::clone(&red_tex),
+                       Rc::clone(&dest_tex),
                        ],
-        anim_state: vec![player_anim.start(), enemy_anim.start(), blocker_anim.start(), red_anim.start()],
+        anim_state: vec![player_anim.start(), enemy_anim.start(), blocker_anim.start(), red_anim.start(), dest_anim.start()],
         // Camera position
         camera: Vec2i(0, 0),
         mode:Mode::Title, 
@@ -490,7 +543,7 @@ fn main() {
     // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let file = BufReader::new(File::open("content/jack/sound/pockemon_center.mp3").unwrap());
     let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
-    // game.soundstream.play_raw(source.convert_samples());
+    game.soundstream.1.play_raw(source.convert_samples()).unwrap();
     // let sink = Sink::try_new(&stream_handle).unwrap();
     // for i in 1..10 {
     //     // Load a sound from a file, using a path relative to Cargo.toml
@@ -533,10 +586,11 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
                 let temp_file = BufReader::new(File::open("content/jack/sound/explosion.wav").unwrap());
                 let temp_source = Decoder::new(temp_file).unwrap().amplify(5.0).take_duration(Duration::from_secs_f32(2.0));
                 state.soundstream.1.play_raw(temp_source.convert_samples()).unwrap();
-                let ten_millis = time::Duration::from_millis(1000);
+                let ten_millis = time::Duration::from_millis(500);
                 // thread::sleep(ten_millis);
                 state.positions[0].0 = 9*16;
                 state.positions[0].1 = 0;
+                state.positions[1] = Vec2i(10*16, 25*16); 
                 state.camera = Vec2i(0, 0);
                 state.movable = true;
             }
@@ -562,6 +616,10 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
                 } else {
                     state.positions[0].0 -= contact.mtv.0;
                 }
+            }
+            (EntityType::Player, EntityType::Destination) => {
+                state.camera = Vec2i(0,0); 
+                state.mode = Mode::EndGame;
             }
             _ => {}
         }
