@@ -22,3 +22,7 @@ impl Resources {
         Rc::new(Texture::with_file(p.as_ref()))
     }
 }
+
+pub fn square(x:i32) -> i32{
+    return x * x;
+}
