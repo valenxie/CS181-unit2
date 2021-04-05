@@ -83,6 +83,9 @@ impl AnimationState {
     pub fn done(&self) -> bool {
         self.time >= self.animation.duration()
     }
+    pub fn change_time(&mut self, t: usize) {
+        self.time = t;
+    }
     pub fn tick(&mut self) {
         let dur = self.animation.duration();
         self.time = if self.animation.looping {
