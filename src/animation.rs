@@ -42,23 +42,32 @@ impl Animation {
 #[derive(Debug)]
 pub struct AnimationState {
     animation: Rc<Animation>,
-    current_frame: (usize, usize),
+    current_frame: (usize, usize),//frame index and time per frame
     time: usize,
 }
 impl AnimationState {
     pub fn animate(&mut self) {
-        let (frame_idx, frame_time) = &mut self.current_frame;
-        *frame_time += 1;
-        if *frame_time == self.animation.frames[*frame_idx].1 {
-            *frame_time = 0;
+        let (fi, ft) = &mut self.current_frame;
+        *fi += 1;
+        if *ft == self.animation.frames[*fi].1 {
+            *ft = 0;
             if self.animation.looping {
-                *frame_idx = (*frame_idx + 1) % self.animation.frames.len();
+                *ft = (*fi + 1) % self.animation.frames.len();
             } else {
-                *frame_idx = (*frame_idx + 1).min(self.animation.frames.len() - 1);
+                *fi = (*fi + 1).min(self.animation.frames.len() - 1);
             }
         }
     }
-    pub fn frame(&self) -> Rect {
+    pub fn set_anim(&mut self, anim: &Rc<Animation>) {    
+        self.current_frame = (0, 0);
+        self.animation = Rc::clone(anim);
+        
+    }
+    pub fn current_frame(&self) -> Rect {
+        self.animation.frames[self.current_frame.0].0
+    }
+
+    pub fn frame(&self) -> Rect { 
         let mut t = 0;
         for (cr, ct) in self.animation.frames.iter() {
             t += ct;

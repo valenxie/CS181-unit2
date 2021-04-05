@@ -41,9 +41,9 @@ pub fn rect_touching(r1:Rect, r2:Rect) -> bool {
     r2.y <= r1.y+r1.h as i32
 }
 
-pub fn resources_touching(r1:Rc<Animation>, r2:Rc<Animation>) -> bool {
-    return rect_touching(r1.frames[0].0, r2.frames[0].0);
-}
+// pub fn resources_touching(r1:Rc<Animation>, r2:Rc<Animation>) -> bool {
+//     return rect_touching(r1.frames[0].0, r2.frames[0].0);
+// }
 
 pub fn rect_displacement(r1:Rect, r2:Rect) -> Option<(i32,i32)> {
     let x_overlap = (r1.x+r1.w as i32).min(r2.x+r2.w as i32) - r1.x.max(r2.x);
@@ -56,9 +56,9 @@ pub fn rect_displacement(r1:Rect, r2:Rect) -> Option<(i32,i32)> {
     }
 }
 
-pub fn resources_displacement(r1:Rc<Animation>, r2:Rc<Animation>) -> Option<(i32,i32)> {
-    return rect_displacement(r1.frames[0].0, r2.frames[0].0);
-}
+// pub fn resources_displacement(r1:Rc<Animation>, r2:Rc<Animation>) -> Option<(i32,i32)> {
+//     return rect_displacement(r1.frames[0].0, r2.frames[0].0);
+// }
 
 pub fn gather_contacts(positions: &Vec<Vec2i>, sizes: &Vec<(usize,usize)>) -> Vec<Contact<usize,usize>> {
     let mut into = vec![];
