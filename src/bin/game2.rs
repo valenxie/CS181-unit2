@@ -135,30 +135,6 @@ impl Mode {
                     game.camera = Vec2i(0, 0);
                     game.movable = true;
                 }
-                let contacts = engine2d::collision::gather_contacts(&game.positions, &game.sizes);
-                let mut tile_contacts= engine2d::collision::gather_contacts_tilemap(&game.positions, &game.sizes,&levels[1].0);
-                for contact in contacts.iter(){
-                    match (levels[game.level].1[contact.a].0, levels[game.level].1[contact.b].0){
-                        (EntityType::Player, EntityType::Barrier) => {
-                            game.movable = false;
-                            //Generate text on screen
-                            let barrier_touched_anim = Rc::new(Animation {
-                                frames: vec![(Rect{x:0,y:0,w:32,h:32}, 1),
-                                             (Rect {x: 32,y: 0,w: 32, h: 32},1)],
-                                looping: false,
-                            });
-                            barrier_touched_anim.start();
-                            
-                        }
-                        (EntityType::Player, EntityType::lvl1Exit) => {
-                            // game.movable = false;
-                            game.level = 1;
-                            game.mode= Mode::Lvl2;
-                            // Mode::Lvl2;
-                        }
-                        _ => {}
-                    }       
-                }
                 if input.key_held(VirtualKeyCode::Q){
                     Mode::EndGame
                 } else if input.key_held(VirtualKeyCode::T){
