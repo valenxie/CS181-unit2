@@ -30,6 +30,7 @@ impl Animation {
     pub fn start(self: &Rc<Animation>) -> AnimationState {
         AnimationState {
             animation: Rc::clone(self),
+            current_frame:(0,0),
             time: 0,
         }
     }
@@ -41,9 +42,22 @@ impl Animation {
 #[derive(Debug)]
 pub struct AnimationState {
     animation: Rc<Animation>,
+    current_frame: (usize, usize),
     time: usize,
 }
 impl AnimationState {
+    pub fn animate(&mut self) {
+        let (frame_idx, frame_time) = &mut self.current_frame;
+        *frame_time += 1;
+        if *frame_time == self.animation.frames[*frame_idx].1 {
+            *frame_time = 0;
+            if self.animation.looping {
+                *frame_idx = (*frame_idx + 1) % self.animation.frames.len();
+            } else {
+                *frame_idx = (*frame_idx + 1).min(self.animation.frames.len() - 1);
+            }
+        }
+    }
     pub fn frame(&self) -> Rect {
         let mut t = 0;
         for (cr, ct) in self.animation.frames.iter() {
