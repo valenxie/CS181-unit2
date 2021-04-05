@@ -5,7 +5,8 @@ pub struct Animation {
     // Do this for the exercise today!
     // You'll want to know the frames involved and the timing for each frame
     // But then there's also dynamic data, which might live in this struct or might live somewhere else
-    // An Animation/AnimationState split could be fine, if AnimationState holds the start time and the present frame (or just the start time) and possibly a reference to the Animation
+    // An Animation/AnimationState split could be fine, if AnimationState holds the start time and the 
+    // present frame (or just the start time) and possibly a reference to the Animation
     // but there are lots of designs that will work!
     pub frames: Vec<(Rect, usize)>,
     pub looping: bool,
@@ -41,7 +42,7 @@ impl Animation {
 #[derive(Debug)]
 pub struct AnimationState {
     animation: Rc<Animation>,
-    time: usize,
+    pub time: usize,
 }
 impl AnimationState {
     pub fn frame(&self) -> Rect {
@@ -56,6 +57,9 @@ impl AnimationState {
             "Animation frame not found for t={}, anim={:?}",
             self.time, self.animation
         );
+    }
+    pub fn change_time(&mut self, t: usize) {
+        self.time = t;
     }
     pub fn done(&self) -> bool {
         self.time >= self.animation.duration()

@@ -62,6 +62,7 @@ impl Mode {
                 // if input.mouse()!=None {
                 //     println!("{}, {}", input.mouse().unwrap().0, input.mouse().unwrap().1);
                 // }
+                game.level = 0;
                 if input.key_held(VirtualKeyCode::P) || 
                    input.key_held(VirtualKeyCode::Return) ||
                    (input.mouse()!=None && input.mouse().unwrap().0 > 16.0*15.0
@@ -71,6 +72,17 @@ impl Mode {
                 {
                     game.level=1;
                     Mode::Play(PlayMode::Map)
+                } else if input.key_held(VirtualKeyCode::Q){
+                    game.level=2;
+                    game.positions = vec![
+                        Vec2i(10*16,0*16),
+                        Vec2i(10*16,25*16), 
+                        Vec2i(5*16,13*16),
+                        Vec2i(4*16,3*16),
+                        Vec2i(9*16,27*16),
+                    ];
+                    game.mode = Mode::EndGame;
+                    Mode::EndGame
                 } else {
                     self
                 }
@@ -92,22 +104,24 @@ impl Mode {
                         } else {
                             game.velocities[0].0 = 0;
                         }
+                        game.anim_state[0].change_time(2);
                     } else if input.key_held(VirtualKeyCode::Left) {
                         if game.positions[0].0 > 0 {
                             game.velocities[0].0 = -2;
                         } else {
                             game.velocities[0].0 = 0;
                         }
+                        game.anim_state[0].change_time(1);
                     } else {
                         game.velocities[0].0 = 0;
                     }
                     if input.key_held(VirtualKeyCode::Up) {
+                        game.anim_state[0].change_time(3);
                         if game.positions[0].1 > 0 {
                             game.velocities[0].1 = -2;
                         } else {
                             game.velocities[0].1 = 0;
                         }
-        
                         if game.positions[0].1 <= game.camera.1+16*5 && 
                             game.camera.1 > 0 {
                             game.camera.1 -= 2;
@@ -118,7 +132,7 @@ impl Mode {
                         } else {
                             game.velocities[0].1 = 0;
                         }
-                    
+                        game.anim_state[0].change_time(0);
                         if game.positions[0].1 >= game.camera.1+16*5 && 
                             game.camera.1 < 10*16 {
                             game.camera.1 += 2;
@@ -137,15 +151,19 @@ impl Mode {
 
                 // Determine enemy velocity - chasing the character
                 if square(game.positions[1].0-game.positions[0].0)+square(game.positions[1].1-game.positions[0].1) <= 8000 {
-                    if game.positions[1].0 > game.positions[0].0 {
-                        game.velocities[1].0 = -1;
-                    } else {
-                        game.velocities[1].0 = 1;
-                    }
                     if game.positions[1].1 > game.positions[0].1 {
                         game.velocities[1].1 = -1;
-                    } else {
+                        game.anim_state[1].change_time(0);
+                    } else if game.positions[1].1 < game.positions[0].1 {
                         game.velocities[1].1 = 1;
+                        game.anim_state[1].change_time(3);
+                    }
+                    if game.positions[1].0 > game.positions[0].0 {
+                        game.velocities[1].0 = -1;
+                        game.anim_state[1].change_time(1);
+                    } else if game.positions[1].0 < game.positions[0].0 {
+                        game.velocities[1].0 = 1;
+                        game.anim_state[1].change_time(2);
                     }
                 } else {
                     game.velocities[1] = Vec2i(0,0);
@@ -176,6 +194,15 @@ impl Mode {
                 }
 
                 if input.key_held(VirtualKeyCode::Q){
+                    game.level=2;
+                    game.positions = vec![
+                        Vec2i(10*16,0*16),
+                        Vec2i(10*16,25*16), 
+                        Vec2i(5*16,13*16),
+                        Vec2i(4*16,3*16),
+                        Vec2i(9*16,27*16),
+                    ];
+                    game.mode = Mode::EndGame;
                     Mode::EndGame
                 } else {
                     self
@@ -183,8 +210,20 @@ impl Mode {
             },
 
             Mode::EndGame => {
-                if input.key_held(VirtualKeyCode::E) {
-                    panic!();
+                if input.mouse()!=None && input.mouse().unwrap().0 > 16.0*15.0
+                && input.mouse().unwrap().0 < 16.0*28.0 && input.mouse().unwrap().1 > 16.0*24.0
+                && input.mouse().unwrap().1 < 16.0*28.0
+                && input.mouse_pressed(0) {
+                    game.positions = vec![
+                        Vec2i(10*16,0*16),
+                        Vec2i(10*16,25*16), 
+                        Vec2i(5*16,13*16),
+                        Vec2i(4*16,3*16),
+                        Vec2i(9*16,27*16),
+                    ];
+                    game.level=0;
+                    game.mode = Mode::Title;
+                    Mode::Title
                 } else {
                     self
                 }
@@ -192,18 +231,18 @@ impl Mode {
         }
     }
     fn display(&self, game:&GameState, screen: &mut Screen, levels: &Vec<Level>) {
+        levels[game.level].0.draw(screen);
         match self {
             Mode::Title => {
-                levels[0].0.draw(screen);
             },
             Mode::Play(pm) => {
-                levels[1].0.draw(screen);
+                //println!("{}", game.anim_state[0].time); 
                 for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
                     screen.bitblt(tex,anim.frame(),*pos);
+                    // texture, animation state frame - a rect, positions
                 }
             },
             Mode::EndGame => {
-                levels[2].0.draw(screen);
             }
         }
     }
@@ -414,9 +453,9 @@ fn main() {
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  212,178,156,230,1,  1,  1,  1,  1,  1,  1,  1,
-                1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+                1,  1,  1,  1,  1,  1,  1,  184,184,184,184,184,184,1,  1,  1,  1,  1,  1,  1,
+                1,  1,  1,  1,  1,  1,  1,  184,212,178,156,230,184,1,  1,  1,  1,  1,  1,  1,
+                1,  1,  1,  1,  1,  1,  1,  184,184,184,184,184,184,1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
@@ -433,8 +472,11 @@ fn main() {
         ),
         // Initial entities on level start
             vec![
-                (EntityType::Player, 9, 0),
-                (EntityType::Enemy, 20, 0)
+                (EntityType::Player, 10, 0),
+                (EntityType::Enemy, 10, 25),
+                (EntityType::Blocker, 5, 13), 
+                (EntityType::HBlocker, 4, 3),
+                (EntityType::Destination, 9, 27),
             ]
         ),
 
@@ -506,16 +548,16 @@ fn main() {
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,1,
+            1,  1,  184,160,210,208,168,216,156,220,222,178,156,220,172,210,208,218,184,1,
+            1,  1,  184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,184,1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
-            1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  184,184,184,184,184,184,1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  184,180,164,208,222,184,1,  1,  1,  1,  1,  1,  1,
+            1,  1,  1,  1,  1,  1,  1,  184,184,184,184,184,184,1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
             1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
@@ -525,16 +567,31 @@ fn main() {
     ),
     // Initial entities on level start
     vec![
-        (EntityType::Player, 0, 0),
-        (EntityType::Enemy, 20, 0)
+        (EntityType::Player, 10, 0),
+        (EntityType::Enemy, 10, 25),
+        (EntityType::Blocker, 5, 13), 
+        (EntityType::HBlocker, 4, 3),
+        (EntityType::Destination, 9, 27),
     ]
 )
     ];
     // tex and anim
     let player_tex = rsrc.load_texture(Path::new("content/reaper.png"));
-    let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
+    // let player_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:35}));
+    let player_anim = Rc::new(Animation::new(vec![
+        (Rect{x:5,y:5,w:25,h:35},0), 
+        (Rect{x:5,y:40,w:25,h:35},1), 
+        (Rect{x:5,y:75,w:25,h:35},2), 
+        (Rect{x:5,y:108,w:25,h:35},3),], false
+    ));
     let enemy_tex = rsrc.load_texture(Path::new("content/jack/small_link.png"));
-    let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));
+    // let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:26,h:36}));
+    let enemy_anim = Rc::new(Animation::new(vec![
+        (Rect{x:0,y:0,w:26,h:36},0), 
+        (Rect{x:0,y:36,w:26,h:36},1), 
+        (Rect{x:0,y:98,w:26,h:36},2), 
+        (Rect{x:0,y:72,w:26,h:36},3),], false
+    ));
     let blocker_tex = rsrc.load_texture(Path::new("content/jack/stone.png"));
     let blocker_anim = Rc::new(Animation::freeze(Rect{x:5,y:5,w:25,h:25}));
     let red_tex = rsrc.load_texture(Path::new("content/jack/red_rectangle.png"));
@@ -678,6 +735,7 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
             }
             (EntityType::Player, EntityType::Destination) => {
                 state.camera = Vec2i(0,0); 
+                state.level = 2;
                 state.mode = Mode::EndGame;
             }
             _ => {}
