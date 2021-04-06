@@ -814,9 +814,9 @@ fn main() {
         movable:true,
         soundstream: OutputStream::try_default().unwrap()
     };
-    // let file = BufReader::new(File::open("content/bgm.mp3").unwrap());
-    // let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
-    // game.soundstream.1.play_raw(source.convert_samples()).unwrap();
+    let file = BufReader::new(File::open("content/bgm.mp3").unwrap());
+    let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
+    game.soundstream.1.play_raw(source.convert_samples()).unwrap();
 
     engine2d::run(WIDTH, HEIGHT, window_builder, rsrc, levels, game, draw_game, update_game);
 }
