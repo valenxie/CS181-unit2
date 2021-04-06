@@ -158,12 +158,12 @@ impl<'fb> Screen<'fb> {
         let x_skip = to_x.max(0) - to_x;
         let y_count = (to_y + from.h as i32).min(self.height as i32) - to_y;
         let x_count = (to_x + from.w as i32).min(self.width as i32) - to_x;
-        // print!("y_count is:{}",y_count);
-        // print!("y_skip is:{}",y_skip);
-        // print!("from.y is:{}",from.y);
-        // print!("x_count is:{}",x_count);
-        // print!("x_skip is:{}",x_skip);
-        // print!("from.x is:{}",from.x);
+        // println!("y_count is:{}",y_count);
+        // println!("y_skip is:{}",y_skip);
+        // println!("from.y is:{}",from.y);
+        // println!("x_count is:{}",x_count);
+        // println!("x_skip is:{}",x_skip);
+        // println!("from.x is:{}",from.x);
         let src_buf = src.buffer();
         for (row_a, row_b) in src_buf[(src_pitch * ((from.y + y_skip) as usize))
             ..(src_pitch * ((from.y + y_count) as usize))]

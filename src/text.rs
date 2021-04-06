@@ -21,17 +21,6 @@ impl Text{
         text_data
     }
 
-    fn get_char_width(&self, c: char) -> i32 {
-        self.data.get(&c).map_or(0, |rect| rect.w.into())
-    }
-
-    fn get_string_width(&self, string: &str) -> i32 {
-        let mut width = 0;
-        for c in string.chars() {
-            width += self.get_char_width(c);
-        }
-        width
-    }
 }
 
 pub trait DrawText{
@@ -39,10 +28,9 @@ pub trait DrawText{
 }
 
 use crate::graphics::Screen;
-impl<'fb> DrawText for Screen<'fb> {
-    // makes a bunch of assumptions, such as that all the characters are the same height. works because we're using a monospace/height font, won't necessarily work for others
+impl<'fb> DrawText for Screen<'fb> {  
     fn draw_text(&mut self, string: &str, pos: Vec2i, font: &Text) {
-        // starting positions
+    
         let mut x = pos.0;
         let y = pos.1;
         for c in string.chars() {

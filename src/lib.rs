@@ -62,6 +62,7 @@ pub fn run<Rule, State>(
     // How many unsimulated frames have we saved up?
     let mut available_time = 0.0;
     let mut since = Instant::now();
+    // let mut screen = Screen::wrap(pixels.get_frame(), width, height, DEPTH, Vec2i(0, 0));
     event_loop.run_return(|event, _, control_flow| {
         // Draw the current frame
         if let Event::RedrawRequested(_) = event {

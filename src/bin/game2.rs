@@ -1,5 +1,5 @@
 use core::time;
-use std::path::Path;
+use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use std::rc::Rc;
 
 use winit::window::WindowBuilder;
@@ -71,15 +71,8 @@ impl Mode {
             Mode::Lvl1 => {
                 if game.movable {                    
                     if input.key_held(VirtualKeyCode::Right) {
-                        // let player_right_anim = Rc::new(Animation {
-                        //     frames: vec![(Rect{x:0,y:32,w:16,h:16}, 1),
-                        //                  (Rect{x:16,y:32,w:16,h:16}, 1),
-                        //                  (Rect{x:32,y:32,w:16,h:16}, 1),
-                        //                  (Rect{x:48,y:32,w:16,h:16}, 1)],
-                        //     looping: true,
-                        // });
-                        // player_right_anim.animate();
-                        if game.positions[3].0 < 500 {
+                        game.anim_state[3].change_time(3);
+                        if game.positions[3].0 < 1000 {
                             game.velocities[3].0 = 1;
                         } else {
                             game.velocities[3].0 = 0;
@@ -89,6 +82,7 @@ impl Mode {
                             game.camera.0 += 1;
                         }
                     } else if input.key_held(VirtualKeyCode::Left) {
+                        game.anim_state[3].change_time(2);
                         if game.positions[3].0 > -256 {
                             game.velocities[3].0 = -1;
                         } else {
@@ -102,6 +96,7 @@ impl Mode {
                         game.velocities[3].0 = 0;
                     }
                     if input.key_held(VirtualKeyCode::Up) {
+                        game.anim_state[3].change_time(0);
                         if game.positions[3].1 > -256 {
                             game.velocities[3].1 = -1;
                         } else {
@@ -111,14 +106,14 @@ impl Mode {
                             game.camera.1 > -256 {
                             game.camera.1 -= 1;
                         }
-                    } else if input.key_held(VirtualKeyCode::Down) {
                         
+                    } else if input.key_held(VirtualKeyCode::Down) {
+                        game.anim_state[3].change_time(1);
                         if game.positions[3].1 < 208 {
                             game.velocities[3].1 = 1;
                         } else {
                             game.velocities[3].1 = 0;
-                        }
-                    
+                        }                     
                         if game.positions[3].1 >= game.camera.1+16*5 && 
                             game.camera.1 < 0 {
                             game.camera.1 += 1;
@@ -151,7 +146,8 @@ impl Mode {
             Mode::Lvl2 => {
                 if game.movable {                    
                     if input.key_held(VirtualKeyCode::Right) {
-                        if game.positions[3].0 < 700 {
+                        if game.positions[3].0 < 2000 {
+                            game.anim_state[3].change_time(3);
                             game.velocities[3].0 = 1;
                         } else {
                             game.velocities[3].0 = 0;
@@ -161,37 +157,41 @@ impl Mode {
                             game.camera.0 += 1;
                         }
                     } else if input.key_held(VirtualKeyCode::Left) {
-                        if game.positions[3].0 > -256 {
+                        game.anim_state[3].change_time(2);
+                        if game.positions[3].0 > 48
+                         {
                             game.velocities[3].0 = -1;
                         } else {
                             game.velocities[3].0 = 0;
                         }
                         if game.positions[3].0 <= game.camera.0+16*5 && 
-                            game.camera.0 > -256 {
+                            game.camera.0 > 0 {
                             game.camera.0 -= 1;
                         }
                     } else {
                         game.velocities[3].0 = 0;
                     }
                     if input.key_held(VirtualKeyCode::Up) {
-                        if game.positions[3].1 > -256 {
+                        game.anim_state[3].change_time(0);
+                        if game.positions[3].1 > 0 {
                             game.velocities[3].1 = -1;
                         } else {
                             game.velocities[3].1 = 0;
                         }
                         if game.positions[3].1 <= game.camera.1+16*5 && 
-                            game.camera.1 > -256 {
+                            game.camera.1 > 0 {
                             game.camera.1 -= 1;
                         }
                     } else if input.key_held(VirtualKeyCode::Down) {
-                        if game.positions[3].1 < 208 {
+                        game.anim_state[3].change_time(1);
+                        if game.positions[3].1 < 512 {
                             game.velocities[3].1 = 1;
                         } else {
                             game.velocities[3].1 = 0;
                         }
                     
                         if game.positions[3].1 >= game.camera.1+16*5 && 
-                            game.camera.1 < 0 {
+                            game.camera.1 < 256 {
                             game.camera.1 += 1;
                         }
                     } else {
@@ -219,28 +219,50 @@ impl Mode {
             }
         }
     }
-    fn display(&self, game:&GameState, screen: &mut Screen, levels: &Vec<Level>) {
+    fn display(&self, game:&GameState, screen: &mut Screen, levels: &Vec<Level>, rsrc:&Resources) {
         match self {
             Mode::Title => {
+                // let rsrc = Resources::new();
+    
                 for t in levels[0].0.iter(){
                     t.draw(screen);
                 }
-                //TODO: draw text
+                screen.draw_text(
+                    "finding home",
+                    Vec2i(80, 80),
+                    &rsrc.text,
+                );
+                screen.draw_text(
+                    "press p to begin",
+                    Vec2i(65, 180),
+                    &rsrc.text,
+                );
+                screen.draw_text(
+                    "press q to exit",
+                    Vec2i(65, 200),
+                    &rsrc.text,
+                );
+
+                
             },
             Mode::Lvl1=> {
-                // screen.set_scroll(game.camera);
+                screen.set_scroll(game.camera);
                 for t in levels[1].0.iter(){
                     t.draw(screen);
                 }
                 for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
                     // screen.bitblt(tex,anim.frame(),*pos);
                     // anim.animate();
-                    screen.bitblt(tex,anim.current_frame(),*pos);
-                    
-                }
+                    screen.bitblt(tex,anim.frame(),*pos);
+                } 
+                screen.draw_text(
+                    "press r to restart",
+                    Vec2i(100, -230),
+                    &rsrc.text,
+                );               
             },
             Mode::Lvl2=> {
-                // screen.set_scroll(game.camera);
+                screen.set_scroll(game.camera);
                 for t in levels[2].0.iter(){
                     t.draw(screen);
                 }
@@ -253,6 +275,11 @@ impl Mode {
                 for t in levels[3].0.iter(){
                     t.draw(screen);
                 }
+                screen.draw_text(
+                    "you are home",
+                    Vec2i(65, 180),
+                    &rsrc.text,
+                );
             }
         }
     }
@@ -274,236 +301,76 @@ struct GameState{
         camera:Vec2i,
         mode:Mode,
         movable:bool,
-        sprites:Vec<Sprite>,
+        soundstream: (rodio::OutputStream, rodio::OutputStreamHandle),
     }
 
 fn main() {
     let window_builder = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
-            .with_title("MazeChill")
+            .with_title("FindingHome")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .with_resizable(false)
     };
     // Here's our resources...
     let rsrc = Resources::new();
-    let tileset1 = Rc::new(Tileset::new(
+    let hometileset = Rc::new(Tileset::new(
         vec![
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
+            Tile{solid:false}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false},
         ],
-        &rsrc.load_texture(Path::new("content/water.png"))
+        &rsrc.load_texture(Path::new("content/home.png"))
     ));
     let lvl1tileset = Rc::new(Tileset::new(
         vec![
-            Tile{solid:false},
-            Tile{solid:true},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:true},
-            Tile{solid:false},
-            Tile{solid:true},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:true},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
+            Tile{solid:false}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:true}, Tile{solid:false}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:true}, Tile{solid:true}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, 
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
             Tile{solid:false},
         ],
         &rsrc.load_texture(Path::new("content/lvl1.png"))
     ));
     let lvl2tileset = Rc::new(Tileset::new(
         vec![
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
-            Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},//5
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},//15
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},//25
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},//35
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false}, Tile{solid:false},//45
+            Tile{solid:false}, Tile{solid:false}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false},//50
+            Tile{solid:false}, Tile{solid:true}, Tile{solid:false}, Tile{solid:false}, Tile{solid:true},//55
+            Tile{solid:true}, Tile{solid:true}, Tile{solid:true}, Tile{solid:true}, Tile{solid:true},
+            Tile{solid:true}, Tile{solid:true}, Tile{solid:true}, Tile{solid:true},
+            
         ],
         &rsrc.load_texture(Path::new("content/lvl2.png"))
     ));
@@ -683,25 +550,25 @@ fn main() {
         Vec2i(0,0),
         // Map size
         (16, 16),
-        &tileset1,
+        &hometileset,
         // Tile grid
         vec![
-            0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
-            2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3,
+            4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 
+            2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3,
+            4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 4, 5,  
         ]
     );
 
@@ -715,8 +582,8 @@ fn main() {
             45, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 
             48, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
             51, 52, 52, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 
-            54, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
-            57, 58, 59, 55, 55, 55, 57, 58, 58, 58, 58, 58, 58, 58, 58, 58,
+            54, 55, 52, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
+            57, 58, 52, 55, 55, 55, 57, 58, 58, 58, 58, 58, 58, 58, 58, 58,
             60, 61, 62, 15, 16, 16, 60, 61, 61, 61, 61, 61, 61, 61, 61, 62,
             63, 64, 65, 18, 19, 19, 63, 64, 64, 64, 64, 64, 64, 64, 64, 65,
             66, 67, 68, 18, 19, 19, 66, 67, 67, 67, 67, 67, 67, 67, 67, 68,
@@ -745,13 +612,13 @@ fn main() {
             15, 16, 16, 60, 61, 24, 25, 61, 61, 61, 61, 15, 16, 62, 52, 52,
             18, 19, 19, 63, 64, 27, 28, 64, 64, 64, 64, 18, 19, 65, 52, 52,
             18, 19, 19, 66, 67, 0, 1, 67, 67, 67, 67, 18, 19, 68, 52, 52,
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52, 
-            12, 12, 12, 52, 36, 37, 37, 38, 52, 52, 52, 12, 12, 52, 52, 52,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 12, 
+            12, 12, 12, 12, 36, 37, 37, 37, 38, 12, 12, 12, 12, 12, 12, 12,
         ]
     );
     let lvl2_map3 = Tilemap::new(
@@ -772,21 +639,91 @@ fn main() {
             52, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52,
             52, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52, 
             52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 
-            52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 
-            52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 
-            52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 
-            52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52,
+            52, 52, 33, 34, 34, 34, 34, 34, 34, 34, 34, 35, 52, 12, 12, 52, 
+            52, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52, 
+            12, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52, 
+            12, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52,
+        ]
+    );
+    let lvl2_map4 = Tilemap::new(
+        Vec2i(0, 256),
+        (16, 16),
+        &lvl2tileset,
+        vec![
+            //52:solid
+            52, 52, 52, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+            52, 52, 52, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            12, 12, 12, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            12, 12, 12, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            12, 12, 12, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+            52, 52, 52, 12, 12, 12, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+        ]
+    );
+    let lvl2_map5 = Tilemap::new(
+        Vec2i(256, 256),
+        (16, 16),
+        &lvl2tileset,
+        vec![
+            //52:solid
+            12, 12, 12, 12, 36, 37, 37, 37, 38, 12, 12, 12, 12, 52, 52, 52,
+            12, 12, 12, 12, 36, 37, 37, 37, 38, 12, 12, 12, 12, 52, 52, 52,  
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 12, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 12,  
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52, 
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 52, 52, 52,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 12,
+            12, 12, 12, 52, 36, 37, 37, 37, 38, 52, 52, 12, 12, 12, 12, 12,
+        ]
+    );
+    let lvl2_map6 = Tilemap::new(
+        Vec2i(512, 256),
+        (16, 16),
+        &lvl2tileset,
+        vec![
+            //52:solid
+            52, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52,
+            52, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52,
+            52, 52, 36, 37, 37, 37, 37, 37, 37, 37, 37, 38, 52, 12, 12, 52,
+            52, 52, 39, 40, 40, 40, 40, 40, 40, 40, 40, 41, 52, 12, 12, 52, 
+            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52,
+            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52,
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52, 52, 12, 12, 52,
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52, 52, 12, 12, 52,
+            12, 12, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 52, 12, 12, 52,
+            12, 12, 12, 12, 12, 12, 12, 12, 52, 12, 12, 52, 52, 12, 12, 52,
+            12, 12, 12, 12, 12, 12, 12, 12, 52, 12, 12, 52, 52, 12, 12, 52, 
+            52, 52, 52, 52, 52, 52, 12, 12, 52, 12, 12, 52, 52, 12, 12, 52, 
+            12, 12, 12, 12, 12, 12, 12, 12, 52, 52, 52, 52, 52, 12, 12, 52, 
+            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 12, 12, 52, 
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52, 
+            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 52,
         ]
     );
     // Here's our game rules (the engine doesn't know about these)
     let levels:Vec<Level> = vec![
         (vec![start_screen],   
-       // Initial entities on level start
          vec![]
          ),
 
         (vec![lvl1map_1,lvl1map_2,lvl1map_3,lvl1map_4,lvl1map_5,lvl1map_6],
-            // Initial entities on level start
          vec![
             (EntityType::Barrier, 17,-12),
             (EntityType::lvl1Exit, 27,-16),
@@ -794,46 +731,40 @@ fn main() {
             (EntityType::Player, 8, 13),
             ]
         ), 
-        (vec![lvl2_map1,lvl2_map2,lvl2_map3],   
-            // Initial entities on level start
-              vec![]
-            //   (EntityType::lvl2Entrance, 20, 20),
-            //        (EntityType::lvl2Exit, 5,5),
-            //        (EntityType::Bridge, 10,10),
-            //        (EntityType::Player, 8, 13)
+        (vec![lvl2_map1,lvl2_map2,lvl2_map3,lvl2_map4,lvl2_map5,lvl2_map6],  
+              vec![
+                (EntityType::lvl2Entrance, 45, 10),
+                (EntityType::lvl2Exit, 650,10),
+                (EntityType::Bridge, 320,220),
+                (EntityType::Player, 45, 15)
+              ]
+            
         ),
 
         (vec![end_screen],   
-         vec![
-                (EntityType::Player, 0, 0),
-                (EntityType::Enemy, 10, 0)
-            ]
+         vec![]
         ),   
     ];
 
     let barrier_tex = rsrc.load_texture(Path::new("content/barrier.png"));
-    let barrier_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
+    // let barrier_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
     let player_tex = rsrc.load_texture(Path::new("content/player.png"));
-    let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:16,w:16,h:32}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
     let lvl1exit_tex = rsrc.load_texture(Path::new("content/lvl1exit.png"));
     let lvl1exit_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:48}));
-    // let lvl2exit_tex = rsrc.load_texture(Path::new("content/lv2exit.png"));
-    // let lvl2exit_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:64}));
-    // let bridge_tex = rsrc.load_texture(Path::new("content/bridge.png"));
-    // let bridge_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:112}));
-    // let lvl2entrance_tex = rsrc.load_texture(Path::new("content/lvl2entrance.png"));
-    let lvl2entrance_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:80}));
-    // let barrier_touched_anim = Rc::new(Animation {
-    //     frames: vec![(Rect{x:0,y:0,w:32,h:32}, 1),
-    //                  (Rect {x: 32,y: 0,w: 32, h: 32},1)],
-    //     looping: false,
-    // }); 
-    let player_up_anim = Rc::new(Animation {
-                            frames: vec![(Rect{x:0,y:64,w:16,h:32},1),(Rect{x:16,y:64,w:16,h:32},1),(Rect{x:32,y:64,w:16,h:32},1),(Rect{x:48,y:64,w:16,h:32},1)],
-                            looping: true,
-                        });
+    let barrier_anim = Rc::new(Animation {
+        frames: vec![(Rect{x:0,y:0,w:32,h:32}, 0),
+                     (Rect {x: 32,y: 0,w: 32, h: 32},1)],
+        looping: false,
+    }); 
+    let player_anim = Rc::new(Animation {
+        frames: vec![(Rect{x:0,y:64,w:16,h:32},0),//(Rect{x:16,y:64,w:16,h:32},1),
+                     (Rect{x:0,y:0,w:16,h:32},1),
+                     (Rect{x:0,y:32,w:16,h:32},2),
+                     (Rect{x:0,y:96,w:16,h:32},3)],
+        looping: false,
+    });
 
     // And here's our game state, which is just stuff that changes.
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
@@ -848,9 +779,6 @@ fn main() {
             levels[1].1[2].0,
             levels[1].1[3].0,
         ],
-        //levels[2].1[0].0,
-        // levels[2].1[1].0,
-        // levels[2].1[2].0,
         positions: vec![
             Vec2i(
                 levels[1].1[0].1 * 16,
@@ -868,18 +796,6 @@ fn main() {
                 levels[1].1[3].1 * 16,
                 levels[1].1[3].2 * 16,
             ),
-            // Vec2i(
-            //     levels[2].1[0].1 * 16,
-            //     levels[2].1[0].2 * 16,
-            // ),
-            // Vec2i(
-            //     levels[2].1[1].1 * 16,
-            //     levels[2].1[1].2 * 16,
-            // ),
-            // Vec2i(
-            //     levels[2].1[2].1 * 16,
-            //     levels[2].1[2].2 * 16,
-            // )
         ],
         velocities: vec![Vec2i(0,0), Vec2i(0,0),Vec2i(0,0), Vec2i(0,0),Vec2i(0,0),Vec2i(0,0), Vec2i(0,0)],
         sizes: vec![(16,16), (40,26),(16,16), (16,16),(16,16), (16,16),(16,16)],
@@ -887,40 +803,28 @@ fn main() {
         textures: vec![Rc::clone(&barrier_tex),
                        Rc::clone(&lvl1exit_tex),
                        Rc::clone(&enemy_tex),
-                       Rc::clone(&player_tex)],
-                    //    Rc::clone(&lvl2entrance_tex),
-                    //    Rc::clone(&lvl2exit_tex),
-                    //    Rc::clone(&&bridge_tex)],
+                       Rc::clone(&player_tex),],
                     
-        anim_state: vec![barrier_anim.start(),lvl1exit_anim.start(),barrier_anim.start(),player_up_anim.start(),lvl2entrance_anim.start()],//lvl2exit_anim.start(),bridge_anim.start()
+        anim_state: vec![barrier_anim.start(),lvl1exit_anim.start(),barrier_anim.start(),player_anim.start()],
         // Current level
         level: 0,
         // Camera position
         camera: Vec2i(0, 0),
         mode:Mode::Title,
         movable:true,
-        sprites: vec![Sprite::new(
-            &player_tex,
-            &player_up_anim,
-            Vec2i(90, 200),
-            0,
-        )]
+        soundstream: OutputStream::try_default().unwrap()
     };
-    
+    // let file = BufReader::new(File::open("content/bgm.mp3").unwrap());
+    // let source = Decoder::new(file).unwrap().delay(std::time::Duration::from_secs(5)).repeat_infinite();
+    // game.soundstream.1.play_raw(source.convert_samples()).unwrap();
+
     engine2d::run(WIDTH, HEIGHT, window_builder, rsrc, levels, game, draw_game, update_game);
 }
 
 fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, screen: &mut Screen, frame:usize) {
     screen.clear(Rgba(80, 80, 80, 255));
     screen.set_scroll(state.camera);
-    if state.level==0{
-        screen.draw_text(
-            "maze chill",
-            Vec2i(8, 13),
-            &resources.text,
-        );
-    }
-    state.mode.display(&state, screen,levels);
+    state.mode.display(state, screen,levels,resources);
 }
 
 fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState, input: &WinitInputHelper, frame: usize) {
@@ -931,24 +835,78 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
     // Handle collisions: Apply restitution impulses.
     //contacts.clear();
     let contacts = engine2d::collision::gather_contacts(&state.positions, &state.sizes);
-    let mut tile_contacts= engine2d::collision::gather_contacts_tilemap(&state.positions, &state.sizes,&levels[1].0);
     for contact in contacts.iter(){
-        println!("{}",state.level);
-        match (levels[state.level].1[contact.a].0, levels[state.level].1[contact.b].0){
+        // println!("{}",state.level);
+        // println!("before{:?}",state.positions.len());
+        match (state.types[contact.a],state.types[contact.b]){
             (EntityType::Player, EntityType::Barrier) => {
                 state.movable = false;
-                //Generate text on screen             
+                state.anim_state[0].change_time(1);
+
             }
             (EntityType::Player, EntityType::lvl1Exit) => {
-                state.level=2;
-                state.positions[3]=Vec2i(20,20);
+                // state.positions[3]=Vec2i(20,20);
                 state.camera=Vec2i(0,0);
-                state.mode=Mode::Lvl2;
+                state.types.clear();
+                state.velocities.clear();
+                state.textures.clear();
+                state.sizes.clear();
+                state.positions.clear();
+                state.anim_state.clear();
+                // println!("after{:?}",state.positions.len());
+                for (e_type,x,y) in levels[2].1.iter(){
+                    state.types.push(*e_type);
+                    state.positions.push(Vec2i(*x,*y));
+                    state.velocities.push(Vec2i(0,0));
+                    match e_type {
+                        EntityType::Enemy => {}
+                        EntityType::Barrier => {}
+                        EntityType::lvl1Exit => {}
+                        EntityType::lvl2Exit => {
+                            state.sizes.push((80,80));
+                            state.textures.push(resources.load_texture(Path::new("content/lvl2exit.png")));
+                            state.anim_state.push(Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:80})).start());
+                            println!("{}",state.level);
+                        }
+                        EntityType::lvl2Entrance => {
+                            state.sizes.push((32,32));
+                            state.textures.push(resources.load_texture(Path::new("content/lvl2entrance.png")));
+                            state.anim_state.push(Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:64})).start())
+                        }
+                        EntityType::Bridge => {
+                            state.sizes.push((16,16));
+                            state.textures.push(resources.load_texture(Path::new("content/bridge.png")));
+                            state.anim_state.push(Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:112})).start())
+                        }
+                        EntityType::Player => {
+                            state.sizes.push((16,16));
+                            state.textures.push(resources.load_texture(Path::new("content/player.png")));
+                            state.anim_state.push(Rc::new(Animation {
+                                frames: vec![(Rect{x:0,y:64,w:16,h:32},0),//(Rect{x:16,y:64,w:16,h:32},1),
+                                             (Rect{x:0,y:0,w:16,h:32},1),
+                                             (Rect{x:0,y:32,w:16,h:32},2),
+                                             (Rect{x:0,y:96,w:16,h:32},3)],
+                                looping: false}).start())
+                        }
+                    }
+
+                }
+                state.level=2;    
+                state.mode=Mode::Lvl2;           
+            }
+            (EntityType::Player, EntityType::lvl2Exit)  => {  
+                state.camera = Vec2i(0,0); 
+                state.mode=Mode::EndGame;
             }
             _ => {}
         }       
     }
+
+    let mut tile_contacts= engine2d::collision::gather_contacts_tilemap(&state.positions, &state.sizes,&levels[state.level].0);
     engine2d::collision::restitute(&mut state.positions, &mut state.sizes,&mut tile_contacts);
+    println!("entered lvl1 collision");
+    println!("{:?}",state.level);
+
     // Update game rules: What happens when the player touches things?  When enemies touch walls?  Etc.
     // Maybe scroll the camera or change level
 }

@@ -97,14 +97,16 @@ pub fn gather_contacts_tilemap(positions: &Vec<Vec2i>, sizes: &Vec<(usize,usize)
             w: sizes[i].0 as u16,
             h: sizes[i].1 as u16,
         };
-        for tm in tilemaps.iter(){
+        for (tmi,tm) in tilemaps.iter().enumerate(){
             for (tile,rect) in [Vec2i(positions[i].0,positions[i].1), //x,y
                                           Vec2i(positions[i].0+sizes[i].0 as i32,positions[i].1), //x+w,y
                                           Vec2i(positions[i].0,positions[i].1+sizes[i].1 as i32), //x,y+h
                                           Vec2i(positions[i].0+sizes[i].0 as i32,positions[i].1+sizes[i].1 as i32)].iter().filter_map(|pos| tm.tile_at(*pos)){
                 if tile.solid{
                     if let Some(disp)=rect_displacement(rect1, rect){
-                        into.push(Contact{a:i,b:TileContact { tile: tile, rect: rect },mtv:disp})
+                        into.push(Contact{a:i,b:TileContact { tile: tile, rect: rect },mtv:disp});
+                        
+                        
                     }
                 }
             }     
@@ -135,13 +137,13 @@ pub fn restitute(positions: &mut Vec<Vec2i>, sizes: &Vec<(usize,usize)>, contact
                     positions[c.a].1 += y
                 } else {
                     positions[c.a].1 -= y
+                }
             }
-        }
-        else {
-            if c.b.rect.x<positions[c.a].0   {
-                positions[c.a].0 += x
-                } else {
-                    positions[c.a].0 -= x                   
+            else {
+                if c.b.rect.x<positions[c.a].0   {
+                    positions[c.a].0 += x
+                    } else {
+                        positions[c.a].0 -= x                   
                 }
             }
         }
