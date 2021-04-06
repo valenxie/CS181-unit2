@@ -1,0 +1,12 @@
+
+Control the reaper and reach to the gate to hell! Becareful of link, your strongest enemy! Don't be caught by him or you will return to the beginning. Also, fire in the normal world is harmful to you! Don't touch them either. 
+
+Control: click play to start; use ↑↓←→ to move
+
+Implemented Features:
+- 8 different graphical building blocks: text, grass, fire, reaper, link, destination gate, stone
+- Scrolling and tilemaps with atlases: The camera moves when you go down
+- AI entity: Link chases you once you get close to him. But luckily, he's not as fast as you. 
+- Sprite and paperdoll animation with atlases: When you move in different directions, the character looks different. So is link! 
+- Music/sfx, situational/responsive music: There is a nice bgm from pockemon, and when you touch fire or link, there's an explosive sound.
+- Gamefeel: Please count this... I know the game feels kind of easy but I think it feels like a nice 2d adventure game. I really like this work! 
