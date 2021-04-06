@@ -42,8 +42,8 @@ impl Animation {
 #[derive(Debug)]
 pub struct AnimationState {
     animation: Rc<Animation>,
-    current_frame: (usize, usize),//frame index and time per frame
-    time: usize,
+    current_frame: (usize, usize),
+    pub time: usize,
 }
 impl AnimationState {
     pub fn animate(&mut self) {
