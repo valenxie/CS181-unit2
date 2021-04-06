@@ -4,7 +4,7 @@ use crate::types::Rect;
 use crate::text::{self, DrawText};
 use std::path::Path;
 use std::rc::Rc;
-const CHAR_SIZE: u16 = 16;
+const CHAR_SIZE: u16 = 8;
 pub struct Resources{
     pub animation: Vec<Rc<Animation>>,
     pub textures: Vec<Rc<Texture>>,

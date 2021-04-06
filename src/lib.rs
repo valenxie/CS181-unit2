@@ -12,6 +12,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit_input_helper::WinitInputHelper;
 pub mod types;
 pub mod text;
+pub mod sprite;
 use types::{Rgba, Vec2i};
 pub mod graphics;
 use graphics::Screen;
@@ -35,7 +36,7 @@ pub fn run<Rule, State>(
     draw: impl Fn(&Resources, &Rule, &State, &mut Screen, usize) + 'static,
     update: impl Fn(&Resources, &Rule, &mut State, &WinitInputHelper, usize) + 'static,
 ) {
-    //Set up sound effect
+    // // Set up sound effect
     // let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
 
     // let file = File::open("content/bgm.mp3").unwrap();

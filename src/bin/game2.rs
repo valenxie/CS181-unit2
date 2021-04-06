@@ -12,12 +12,16 @@ use engine2d::graphics::Screen;
 use engine2d::tiles::*;
 use engine2d::animation::*;
 use engine2d::text::{self, DrawText};
+use engine2d::sprite::*;
 
 use engine2d::collision::*;
 // Imagine a Resources struct (we'll call it AssetDB or Assets in the future)
 // which wraps all accesses to textures, sounds, animations, etc.
 use engine2d::resources::*;
 use engine2d::texture::Texture;
+use rodio::{Decoder, OutputStream, Sink};
+use rodio::source::{SineWave, Source};
+
 
 const WIDTH: usize = 256;
 const HEIGHT: usize = 256;
@@ -28,6 +32,9 @@ enum EntityType {
     Enemy,
     Barrier,
     lvl1Exit,
+    lvl2Exit,
+    lvl2Entrance,
+    Bridge
 
 }
 
@@ -64,13 +71,13 @@ impl Mode {
             Mode::Lvl1 => {
                 if game.movable {                    
                     if input.key_held(VirtualKeyCode::Right) {
-                        let player_right_anim = Rc::new(Animation {
-                            frames: vec![(Rect{x:0,y:32,w:16,h:16}, 1),
-                                         (Rect{x:16,y:32,w:16,h:16}, 1),
-                                         (Rect{x:32,y:32,w:16,h:16}, 1),
-                                         (Rect{x:48,y:32,w:16,h:16}, 1)],
-                            looping: true,
-                        });
+                        // let player_right_anim = Rc::new(Animation {
+                        //     frames: vec![(Rect{x:0,y:32,w:16,h:16}, 1),
+                        //                  (Rect{x:16,y:32,w:16,h:16}, 1),
+                        //                  (Rect{x:32,y:32,w:16,h:16}, 1),
+                        //                  (Rect{x:48,y:32,w:16,h:16}, 1)],
+                        //     looping: true,
+                        // });
                         // player_right_anim.animate();
                         if game.positions[3].0 < 500 {
                             game.velocities[3].0 = 1;
@@ -105,10 +112,7 @@ impl Mode {
                             game.camera.1 -= 1;
                         }
                     } else if input.key_held(VirtualKeyCode::Down) {
-                        let player_up_anim = Rc::new(Animation {
-                            frames: vec![(Rect{x:0,y:90,w:16,h:32}, 1)],
-                            looping: false,
-                        });
+                        
                         if game.positions[3].1 < 208 {
                             game.velocities[3].1 = 1;
                         } else {
@@ -229,7 +233,10 @@ impl Mode {
                     t.draw(screen);
                 }
                 for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
-                    screen.bitblt(tex,anim.frame(),*pos);
+                    // screen.bitblt(tex,anim.frame(),*pos);
+                    // anim.animate();
+                    screen.bitblt(tex,anim.current_frame(),*pos);
+                    
                 }
             },
             Mode::Lvl2=> {
@@ -237,7 +244,8 @@ impl Mode {
                 for t in levels[2].0.iter(){
                     t.draw(screen);
                 }
-                for ((pos,tex),anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
+    
+                for ((mut pos,mut tex),mut anim) in game.positions.iter().zip(game.textures.iter()).zip(game.anim_state.iter()) {
                     screen.bitblt(tex,anim.frame(),*pos);
                 }
             },
@@ -266,7 +274,7 @@ struct GameState{
         camera:Vec2i,
         mode:Mode,
         movable:bool,
-        direction: Direction
+        sprites:Vec<Sprite>,
     }
 
 fn main() {
@@ -631,7 +639,7 @@ fn main() {
             16, 16, 16, 17, 130, 130, 130, 130, 130, 130, 130, 15, 16, 16, 16, 17, 
             21, 21, 21, 22, 130, 130, 130, 130, 130, 130, 130, 20, 21, 21, 21, 22,
             26, 26, 26, 27, 130, 130, 130, 130, 130, 130, 130, 25, 26, 26, 26, 27,
-            1, 1, 1, 2, 130, 130, 130, 130, 130, 130, 130, 0, 1, 1, 1, 1,
+            1, 1, 1, 2, 130, 130, 130, 130, 130, 130, 130, 0, 6, 6, 1, 1,
             6, 6, 6, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
             6, 6, 6, 7, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 6, 6,
             11, 11, 11, 12, 130, 130, 130, 130, 130, 130, 130, 5, 6, 6, 11, 11,
@@ -788,7 +796,11 @@ fn main() {
         ), 
         (vec![lvl2_map1,lvl2_map2,lvl2_map3],   
             // Initial entities on level start
-              vec![(EntityType::Player, 8, 13)]
+              vec![]
+            //   (EntityType::lvl2Entrance, 20, 20),
+            //        (EntityType::lvl2Exit, 5,5),
+            //        (EntityType::Bridge, 10,10),
+            //        (EntityType::Player, 8, 13)
         ),
 
         (vec![end_screen],   
@@ -798,84 +810,35 @@ fn main() {
             ]
         ),   
     ];
-    let up_frames =vec![
-        Rect {
-        x: 0,
-        y: 90,
-        w: 16,
-        h: 32,
-    }, Rect {
-        x: 0,
-        y: 90,
-        w: 32,
-        h: 32,
-    },
-    Rect {
-        x: 0,
-        y: 90,
-        w: 48,
-        h: 32,
-    },
-    Rect {
-        x: 0,
-        y: 90,
-        w: 64,
-        h: 32,
-    }
-    ];
 
-    const CHAR_SIZE: u16 = 8;
     let barrier_tex = rsrc.load_texture(Path::new("content/barrier.png"));
     let barrier_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:32,h:32}));
     let player_tex = rsrc.load_texture(Path::new("content/player.png"));
-    let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
+    let player_anim = Rc::new(Animation::freeze(Rect{x:0,y:16,w:16,h:32}));
     let enemy_tex = Rc::clone(&player_tex);
     let enemy_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:16,h:32}));
     let lvl1exit_tex = rsrc.load_texture(Path::new("content/lvl1exit.png"));
     let lvl1exit_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:48}));
-    let barrier_touched_anim = Rc::new(Animation {
-        frames: vec![(Rect{x:0,y:0,w:32,h:32}, 1),
-                     (Rect {x: 32,y: 0,w: 32, h: 32},1)],
-        looping: false,
-    }); 
-    let text = {
-        let image =
-            Rc::new(Texture::with_file(Path::new("content/font.png")));
-        let info = [
-            (' ', Rect::new(56, 104, CHAR_SIZE, CHAR_SIZE)),
-            ('a', Rect::new(40, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('b', Rect::new(48, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('c', Rect::new(56, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('d', Rect::new(64, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('e', Rect::new(72, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('f', Rect::new(80, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('g', Rect::new(88, 32, CHAR_SIZE, CHAR_SIZE)),
-            ('h', Rect::new(0, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('i', Rect::new(8, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('j', Rect::new(16, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('k', Rect::new(24, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('l', Rect::new(32, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('m', Rect::new(40, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('n', Rect::new(48, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('o', Rect::new(56, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('p', Rect::new(64, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('q', Rect::new(72, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('r', Rect::new(80, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('s', Rect::new(88, 40, CHAR_SIZE, CHAR_SIZE)),
-            ('t', Rect::new(0, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('u', Rect::new(8, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('v', Rect::new(16, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('w', Rect::new(24, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('x', Rect::new(32, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('y', Rect::new(40, 48, CHAR_SIZE, CHAR_SIZE)),
-            ('z', Rect::new(48, 48, CHAR_SIZE, CHAR_SIZE)),
-        ];
-        text::Text::new(&image, &info)
-    };
+    // let lvl2exit_tex = rsrc.load_texture(Path::new("content/lv2exit.png"));
+    // let lvl2exit_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:64,h:64}));
+    // let bridge_tex = rsrc.load_texture(Path::new("content/bridge.png"));
+    // let bridge_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:112}));
+    // let lvl2entrance_tex = rsrc.load_texture(Path::new("content/lvl2entrance.png"));
+    let lvl2entrance_anim = Rc::new(Animation::freeze(Rect{x:0,y:0,w:80,h:80}));
+    // let barrier_touched_anim = Rc::new(Animation {
+    //     frames: vec![(Rect{x:0,y:0,w:32,h:32}, 1),
+    //                  (Rect {x: 32,y: 0,w: 32, h: 32},1)],
+    //     looping: false,
+    // }); 
+    let player_up_anim = Rc::new(Animation {
+                            frames: vec![(Rect{x:0,y:64,w:16,h:32},1),(Rect{x:16,y:64,w:16,h:32},1),(Rect{x:32,y:64,w:16,h:32},1),(Rect{x:48,y:64,w:16,h:32},1)],
+                            looping: true,
+                        });
+
     // And here's our game state, which is just stuff that changes.
     // We'll say an entity is a type, a position, a velocity, a size, a texture, and an animation state.
     // State here will stitch them all together.
-    let mut game = GameState{
+    let game = GameState{
         // Every entity has a position, a size, a texture, and animation state.
         // Assume entity 0 is the player
         types: vec![
@@ -885,6 +848,9 @@ fn main() {
             levels[1].1[2].0,
             levels[1].1[3].0,
         ],
+        //levels[2].1[0].0,
+        // levels[2].1[1].0,
+        // levels[2].1[2].0,
         positions: vec![
             Vec2i(
                 levels[1].1[0].1 * 16,
@@ -901,23 +867,44 @@ fn main() {
             Vec2i(
                 levels[1].1[3].1 * 16,
                 levels[1].1[3].2 * 16,
-            )
+            ),
+            // Vec2i(
+            //     levels[2].1[0].1 * 16,
+            //     levels[2].1[0].2 * 16,
+            // ),
+            // Vec2i(
+            //     levels[2].1[1].1 * 16,
+            //     levels[2].1[1].2 * 16,
+            // ),
+            // Vec2i(
+            //     levels[2].1[2].1 * 16,
+            //     levels[2].1[2].2 * 16,
+            // )
         ],
-        velocities: vec![Vec2i(0,0), Vec2i(0,0),Vec2i(0,0), Vec2i(0,0)],
-        sizes: vec![(16,16), (40,26),(16,16), (16,16)],
+        velocities: vec![Vec2i(0,0), Vec2i(0,0),Vec2i(0,0), Vec2i(0,0),Vec2i(0,0),Vec2i(0,0), Vec2i(0,0)],
+        sizes: vec![(16,16), (40,26),(16,16), (16,16),(16,16), (16,16),(16,16)],
         // Could be texture handles instead, let's talk about that in two weeks
         textures: vec![Rc::clone(&barrier_tex),
                        Rc::clone(&lvl1exit_tex),
                        Rc::clone(&enemy_tex),
-                       Rc::clone(&player_tex),],
-        anim_state: vec![barrier_anim.start(),lvl1exit_anim.start(),player_anim.start(),enemy_anim.start()],
+                       Rc::clone(&player_tex)],
+                    //    Rc::clone(&lvl2entrance_tex),
+                    //    Rc::clone(&lvl2exit_tex),
+                    //    Rc::clone(&&bridge_tex)],
+                    
+        anim_state: vec![barrier_anim.start(),lvl1exit_anim.start(),barrier_anim.start(),player_up_anim.start(),lvl2entrance_anim.start()],//lvl2exit_anim.start(),bridge_anim.start()
         // Current level
         level: 0,
         // Camera position
         camera: Vec2i(0, 0),
         mode:Mode::Title,
         movable:true,
-        direction:Direction::Up
+        sprites: vec![Sprite::new(
+            &player_tex,
+            &player_up_anim,
+            Vec2i(90, 200),
+            0,
+        )]
     };
     
     engine2d::run(WIDTH, HEIGHT, window_builder, rsrc, levels, game, draw_game, update_game);
@@ -929,7 +916,7 @@ fn draw_game(resources:&Resources, levels: &Vec<Level>, state: &GameState, scree
     if state.level==0{
         screen.draw_text(
             "maze chill",
-            Vec2i(0, 0),
+            Vec2i(8, 13),
             &resources.text,
         );
     }
@@ -950,14 +937,10 @@ fn update_game(resources:&Resources, levels: &Vec<Level>, state: &mut GameState,
         match (levels[state.level].1[contact.a].0, levels[state.level].1[contact.b].0){
             (EntityType::Player, EntityType::Barrier) => {
                 state.movable = false;
-                //Generate text on screen
-                let barrier_touched_anim = Rc::new(Animation {
-                    frames: vec![(Rect{x:0,y:0,w:32,h:32}, 1),
-                                 (Rect {x: 32,y: 0,w: 32, h: 32},1)],
-                    looping: false,
-                });              
+                //Generate text on screen             
             }
             (EntityType::Player, EntityType::lvl1Exit) => {
+                state.level=2;
                 state.positions[3]=Vec2i(20,20);
                 state.camera=Vec2i(0,0);
                 state.mode=Mode::Lvl2;
